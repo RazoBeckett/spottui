@@ -1,0 +1,269 @@
+package tui
+
+import (
+	"context"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/zmb3/spotify/v2"
+)
+
+// Message types for async results
+
+// UserDataMsg contains initial user data loaded at startup
+type UserDataMsg struct {
+	User      *spotify.PrivateUser
+	Playlists []spotify.SimplePlaylist
+}
+
+// TracksLoadedMsg contains tracks for a playlist
+type TracksLoadedMsg struct {
+	Tracks []spotify.PlaylistTrack
+}
+
+// PlaybackStateMsg contains current playback state
+type PlaybackStateMsg struct {
+	State *spotify.PlayerState
+}
+
+// PollPlaybackMsg triggers a playback state refresh
+type PollPlaybackMsg struct{}
+
+// ErrMsg contains an error from async operations
+type ErrMsg struct {
+	Err error
+}
+
+// Commands (functions that return tea.Cmd)
+
+func (m Model) fetchInitialData() tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
+		defer cancel()
+
+		// Fetch user info
+		user, err := m.client.CurrentUser(ctx)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		// Fetch playlists (paginated)
+		var allPlaylists []spotify.SimplePlaylist
+		limit := 50
+		offset := 0
+
+		for {
+			playlists, err := m.client.CurrentUsersPlaylists(ctx,
+				spotify.Limit(limit), spotify.Offset(offset))
+			if err != nil {
+				return ErrMsg{Err: err}
+			}
+
+			allPlaylists = append(allPlaylists, playlists.Playlists...)
+
+			if len(playlists.Playlists) < limit {
+				break
+			}
+			offset += limit
+		}
+
+		return UserDataMsg{
+			User:      user,
+			Playlists: allPlaylists,
+		}
+	}
+}
+
+func (m Model) fetchTracks(playlistID spotify.ID) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
+		defer cancel()
+
+		var allTracks []spotify.PlaylistTrack
+		limit := 100
+		offset := 0
+
+		for {
+			tracks, err := m.client.GetPlaylistTracks(ctx, playlistID,
+				spotify.Limit(limit), spotify.Offset(offset))
+			if err != nil {
+				return ErrMsg{Err: err}
+			}
+
+			allTracks = append(allTracks, tracks.Tracks...)
+
+			if len(tracks.Tracks) < limit {
+				break
+			}
+			offset += limit
+		}
+
+		return TracksLoadedMsg{Tracks: allTracks}
+	}
+}
+
+func (m Model) pollPlaybackState() tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+		defer cancel()
+
+		state, err := m.client.PlayerState(ctx)
+		if err != nil {
+			// Don't treat as error - player might just be inactive
+			return PlaybackStateMsg{State: nil}
+		}
+
+		return PlaybackStateMsg{State: state}
+	}
+}
+
+func (m Model) schedulePlaybackPoll() tea.Cmd {
+	return tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return PollPlaybackMsg{}
+	})
+}
+
+// Playback control commands
+
+func (m Model) togglePlayback() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+
+		state, err := m.client.PlayerState(ctx)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		if state != nil && state.Playing {
+			err = m.client.Pause(ctx)
+		} else {
+			err = m.client.Play(ctx)
+		}
+
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		// Refresh state after a short delay
+		time.Sleep(200 * time.Millisecond)
+		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) nextTrack() tea.Cmd {
+	return func() tea.Msg {
+		if err := m.client.Next(context.Background()); err != nil {
+			return ErrMsg{Err: err}
+		}
+		time.Sleep(200 * time.Millisecond)
+		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) prevTrack() tea.Cmd {
+	return func() tea.Msg {
+		if err := m.client.Previous(context.Background()); err != nil {
+			return ErrMsg{Err: err}
+		}
+		time.Sleep(200 * time.Millisecond)
+		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) volumeUp() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		state, err := m.client.PlayerState(ctx)
+		if err != nil || state == nil {
+			return nil
+		}
+
+		newVol := int(state.Device.Volume) + 10
+		if newVol > 100 {
+			newVol = 100
+		}
+
+		m.client.Volume(ctx, newVol)
+		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) volumeDown() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		state, err := m.client.PlayerState(ctx)
+		if err != nil || state == nil {
+			return nil
+		}
+
+		newVol := int(state.Device.Volume) - 10
+		if newVol < 0 {
+			newVol = 0
+		}
+
+		m.client.Volume(ctx, newVol)
+		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) toggleShuffle() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		state, err := m.client.PlayerState(ctx)
+		if err != nil || state == nil {
+			return nil
+		}
+
+		m.client.Shuffle(ctx, !state.ShuffleState)
+		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) cycleRepeat() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		state, err := m.client.PlayerState(ctx)
+		if err != nil || state == nil {
+			return nil
+		}
+
+		// Cycle: off -> context -> track -> off
+		var newState string
+		switch state.RepeatState {
+		case "off":
+			newState = "context"
+		case "context":
+			newState = "track"
+		default:
+			newState = "off"
+		}
+
+		m.client.Repeat(ctx, newState)
+		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) playTrack(track spotify.PlaylistTrack) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+
+		if m.selectedPlaylist == nil {
+			return nil
+		}
+
+		// Play the specific track from the playlist context
+		opts := &spotify.PlayOptions{
+			PlaybackContext: &m.selectedPlaylist.URI,
+			PlaybackOffset: &spotify.PlaybackOffset{
+				URI: track.Track.URI,
+			},
+		}
+
+		if err := m.client.PlayOpt(ctx, opts); err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		time.Sleep(200 * time.Millisecond)
+		return PollPlaybackMsg{}
+	}
+}
