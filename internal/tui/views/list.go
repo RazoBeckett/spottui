@@ -234,3 +234,88 @@ func CreateDeviceList(devices []spotify.PlayerDevice, s styles.Styles, width, he
 
 	return l
 }
+
+type SearchTrackItem struct {
+	Track spotify.FullTrack
+}
+
+func (i SearchTrackItem) Title() string {
+	if i.Track.Name == "" {
+		return "Unknown Track"
+	}
+	return i.Track.Name
+}
+
+func (i SearchTrackItem) Description() string {
+	if len(i.Track.Artists) == 0 {
+		return "Unknown Artist"
+	}
+	artists := make([]string, len(i.Track.Artists))
+	for j, a := range i.Track.Artists {
+		artists[j] = a.Name
+	}
+	return strings.Join(artists, ", ")
+}
+
+func (i SearchTrackItem) FilterValue() string {
+	return i.Title() + " " + i.Description()
+}
+
+type SearchTrackDelegate struct {
+	Styles       styles.Styles
+	CurrentTrack string
+}
+
+func (d SearchTrackDelegate) Height() int                             { return 2 }
+func (d SearchTrackDelegate) Spacing() int                            { return 0 }
+func (d SearchTrackDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d SearchTrackDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(SearchTrackItem)
+	if !ok {
+		return
+	}
+
+	isPlaying := string(i.Track.URI) == d.CurrentTrack
+	isSelected := index == m.Index()
+
+	var titleStyle, descStyle lipgloss.Style
+
+	if isPlaying || isSelected {
+		titleStyle = d.Styles.ListItemActive
+	} else {
+		titleStyle = d.Styles.ListItem
+	}
+
+	descStyle = d.Styles.Muted
+
+	prefix := "  "
+	if isPlaying {
+		prefix = "♫ "
+	} else if isSelected {
+		prefix = "▶ "
+	}
+
+	title := titleStyle.Render(prefix + i.Title())
+	desc := descStyle.Render("  " + i.Description())
+
+	fmt.Fprint(w, title+"\n"+desc)
+}
+
+func CreateSearchResultsList(tracks []spotify.FullTrack, s styles.Styles, currentTrackURI string, width, height int) list.Model {
+	items := make([]list.Item, len(tracks))
+	for i, t := range tracks {
+		items[i] = SearchTrackItem{Track: t}
+	}
+
+	delegate := SearchTrackDelegate{Styles: s, CurrentTrack: currentTrackURI}
+
+	l := list.New(items, delegate, width, height)
+	l.Title = "Search Results"
+	l.SetShowStatusBar(true)
+	l.SetFilteringEnabled(false)
+	l.Styles.Title = s.ListTitle
+	l.SetShowHelp(false)
+
+	return l
+}

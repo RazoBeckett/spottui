@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/zmb3/spotify/v2"
@@ -22,6 +23,7 @@ const (
 	ViewPlaylists
 	ViewTracks
 	ViewDevices
+	ViewSearch
 	ViewHelp
 )
 
@@ -39,10 +41,12 @@ type Model struct {
 	ctx    context.Context
 
 	// Sub-models (embedded Bubble Tea components)
-	spinner   spinner.Model
-	playlists list.Model
-	tracks    list.Model
-	devices   list.Model
+	spinner       spinner.Model
+	playlists     list.Model
+	tracks        list.Model
+	devices       list.Model
+	searchInput   textinput.Model
+	searchResults list.Model
 
 	// Data
 	currentUser      *spotify.PrivateUser
@@ -51,6 +55,8 @@ type Model struct {
 	tracksData       []spotify.PlaylistTrack
 	playbackState    *spotify.PlayerState
 	devicesData      []spotify.PlayerDevice
+	searchTracksData []spotify.FullTrack
+	searching        bool
 
 	// Styling and keybindings
 	styles styles.Styles
@@ -62,13 +68,19 @@ func NewModel(client *spotify.Client) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
+	ti := textinput.New()
+	ti.Placeholder = "Search tracks..."
+	ti.CharLimit = 100
+	ti.Width = 40
+
 	return Model{
-		view:    ViewLoading,
-		client:  client,
-		ctx:     context.Background(),
-		spinner: s,
-		styles:  styles.DefaultStyles(),
-		keys:    DefaultKeyMap(),
+		view:        ViewLoading,
+		client:      client,
+		ctx:         context.Background(),
+		spinner:     s,
+		searchInput: ti,
+		styles:      styles.DefaultStyles(),
+		keys:        DefaultKeyMap(),
 	}
 }
 
@@ -170,6 +182,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.view = ViewDevices
 		return m, nil
 
+	case SearchResultsMsg:
+		m.searching = false
+		m.searchTracksData = msg.Tracks
+		listHeight := m.height - 14
+		if listHeight < 5 {
+			listHeight = 5
+		}
+		currentTrack := ""
+		if m.playbackState != nil && m.playbackState.Item != nil {
+			currentTrack = string(m.playbackState.Item.URI)
+		}
+		m.searchResults = views.CreateSearchResultsList(msg.Tracks, m.styles, currentTrack, m.width-4, listHeight)
+		return m, nil
+
 	case ErrMsg:
 		m.err = msg.Err
 		return m, nil
@@ -206,6 +232,8 @@ func (m Model) View() string {
 		return m.renderTracks()
 	case ViewDevices:
 		return m.renderDevices()
+	case ViewSearch:
+		return m.renderSearch()
 	case ViewHelp:
 		return m.renderHelp()
 	default:
@@ -214,7 +242,10 @@ func (m Model) View() string {
 }
 
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// Global keybindings (work in all views)
+	if m.view == ViewSearch && m.searchInput.Focused() {
+		return m.handleSearchKeys(msg)
+	}
+
 	switch {
 	case key.Matches(msg, m.keys.Quit):
 		return m, tea.Quit
@@ -266,6 +297,13 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.Devices):
 		m.prevView = m.view
 		return m, m.fetchDevices()
+
+	case key.Matches(msg, m.keys.GlobalSearch):
+		m.prevView = m.view
+		m.view = ViewSearch
+		m.searchInput.Focus()
+		m.searchTracksData = nil
+		return m, textinput.Blink
 	}
 
 	// View-specific keybindings
@@ -278,6 +316,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case ViewDevices:
 		return m.handleDeviceKeys(msg)
+
+	case ViewSearch:
+		return m.handleSearchKeys(msg)
 	}
 
 	return m, nil
@@ -326,6 +367,53 @@ func (m Model) handleDeviceKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.searchInput.Focused() {
+		switch msg.String() {
+		case "esc", "q":
+			m.searchInput.Blur()
+			return m, nil
+		case "enter":
+			if m.searchInput.Value() != "" {
+				m.searchInput.Blur()
+				m.searching = true
+				return m, m.searchTracks(m.searchInput.Value())
+			}
+			return m, nil
+		}
+		var cmd tea.Cmd
+		m.searchInput, cmd = m.searchInput.Update(msg)
+		return m, cmd
+	}
+
+	if key.Matches(msg, m.keys.Back) {
+		m.view = m.prevView
+		return m, nil
+	}
+
+	if key.Matches(msg, m.keys.Enter) {
+		if len(m.searchTracksData) > 0 {
+			if item, ok := m.searchResults.SelectedItem().(views.SearchTrackItem); ok {
+				return m, m.playSearchTrack(item.Track)
+			}
+		}
+	}
+
+	switch msg.String() {
+	case "/", "i":
+		m.searchInput.Focus()
+		return m, textinput.Blink
+	}
+
+	if len(m.searchTracksData) > 0 {
+		var cmd tea.Cmd
+		m.searchResults, cmd = m.searchResults.Update(msg)
+		return m, cmd
+	}
+
+	return m, nil
+}
+
 // Render functions
 
 func (m Model) renderLoading() string {
@@ -372,6 +460,35 @@ func (m Model) renderDevices() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
 		content,
+		help,
+	)
+}
+
+func (m Model) renderSearch() string {
+	header := m.renderHeader()
+
+	inputStyle := m.styles.Header.Copy().Padding(0, 1)
+	searchBox := inputStyle.Render("🔍 " + m.searchInput.View())
+
+	var content string
+	if len(m.searchTracksData) > 0 {
+		content = m.searchResults.View()
+	} else if m.searching {
+		content = m.styles.Muted.Render("\n  Searching...")
+	} else if m.searchInput.Value() != "" && !m.searchInput.Focused() {
+		content = m.styles.Muted.Render("\n  No results found")
+	} else {
+		content = m.styles.Muted.Render("\n  Type your query and press Enter to search...")
+	}
+
+	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	help := m.styles.HelpBar.Render("enter search • ↑/↓ navigate results • esc back")
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		header,
+		searchBox,
+		content,
+		player,
 		help,
 	)
 }

@@ -22,11 +22,12 @@ type KeyMap struct {
 	Repeat     key.Binding
 
 	// App
-	Help    key.Binding
-	Quit    key.Binding
-	Search  key.Binding
-	Refresh key.Binding
-	Devices key.Binding
+	Help         key.Binding
+	Quit         key.Binding
+	Search       key.Binding
+	GlobalSearch key.Binding
+	Refresh      key.Binding
+	Devices      key.Binding
 }
 
 // DefaultKeyMap returns the default keybindings
@@ -94,7 +95,11 @@ func DefaultKeyMap() KeyMap {
 		),
 		Search: key.NewBinding(
 			key.WithKeys("/"),
-			key.WithHelp("/", "search"),
+			key.WithHelp("/", "filter"),
+		),
+		GlobalSearch: key.NewBinding(
+			key.WithKeys("S"),
+			key.WithHelp("S", "global search"),
 		),
 		Refresh: key.NewBinding(
 			key.WithKeys("ctrl+r"),
@@ -116,7 +121,7 @@ func (k KeyMap) ShortHelp() []key.Binding {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Left, k.Right},
-		{k.Enter, k.Back, k.Search},
+		{k.Enter, k.Back, k.Search, k.GlobalSearch},
 		{k.PlayPause, k.Next, k.Prev},
 		{k.VolumeUp, k.VolumeDown, k.Shuffle, k.Repeat},
 		{k.Help, k.Quit, k.Refresh, k.Devices},

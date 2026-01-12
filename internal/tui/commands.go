@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -295,6 +296,71 @@ func (m Model) transferPlayback(deviceID spotify.ID) tea.Cmd {
 		}
 
 		time.Sleep(300 * time.Millisecond)
+		return PollPlaybackMsg{}
+	}
+}
+
+type SearchResultsMsg struct {
+	Tracks []spotify.FullTrack
+}
+
+func (m Model) searchTracks(query string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
+		defer cancel()
+
+		result, err := m.client.Search(ctx, query, spotify.SearchTypeTrack, spotify.Limit(50))
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		if result.Tracks == nil {
+			return SearchResultsMsg{Tracks: []spotify.FullTrack{}}
+		}
+
+		return SearchResultsMsg{Tracks: result.Tracks.Tracks}
+	}
+}
+
+func (m Model) playSearchTrack(track spotify.FullTrack) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+
+		devices, err := m.client.PlayerDevices(ctx)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		var activeDeviceID *spotify.ID
+		for _, d := range devices {
+			if d.Active {
+				activeDeviceID = &d.ID
+				break
+			}
+		}
+
+		if activeDeviceID == nil && len(devices) > 0 {
+			activeDeviceID = &devices[0].ID
+			if err := m.client.TransferPlayback(ctx, *activeDeviceID, false); err != nil {
+				return ErrMsg{Err: err}
+			}
+			time.Sleep(300 * time.Millisecond)
+		}
+
+		if activeDeviceID == nil {
+			return ErrMsg{Err: fmt.Errorf("no Spotify devices available - open Spotify on a device first")}
+		}
+
+		opts := &spotify.PlayOptions{
+			URIs:     []spotify.URI{track.URI},
+			DeviceID: activeDeviceID,
+		}
+
+		if err := m.client.PlayOpt(ctx, opts); err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		time.Sleep(200 * time.Millisecond)
 		return PollPlaybackMsg{}
 	}
 }
