@@ -2,6 +2,9 @@
 
 A beautiful terminal-based Spotify client built with Go, using the Charmbracelet ecosystem (Bubble Tea, Lip Gloss, Bubbles).
 
+> [!NOTE]
+> This project is under active development. Features may change and bugs may exist. Contributions and feedback are welcome!
+
 ![SpotTUI Demo](demo.gif)
 
 ## Features
