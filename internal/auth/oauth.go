@@ -41,6 +41,7 @@ func NewAuthenticator(clientID, redirectURI string) (*Authenticator, error) {
 		string(spotifyauth.ScopePlaylistModifyPublic),
 		string(spotifyauth.ScopePlaylistModifyPrivate),
 		string(spotifyauth.ScopeUserReadPrivate),
+		string(spotifyauth.ScopeUserReadRecentlyPlayed),
 	}
 
 	auth := spotifyauth.New(
@@ -57,6 +58,7 @@ func NewAuthenticator(clientID, redirectURI string) (*Authenticator, error) {
 			spotifyauth.ScopePlaylistModifyPublic,
 			spotifyauth.ScopePlaylistModifyPrivate,
 			spotifyauth.ScopeUserReadPrivate,
+			spotifyauth.ScopeUserReadRecentlyPlayed,
 		),
 	)
 
