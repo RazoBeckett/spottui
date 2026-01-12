@@ -501,9 +501,19 @@ func (m Model) renderLoading() string {
 
 func (m Model) renderPlaylists() string {
 	header := m.renderHeader()
-	content := m.playlists.View()
 	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
 	help := m.renderHelpBar()
+
+	headerHeight := lipgloss.Height(header)
+	playerHeight := lipgloss.Height(player)
+	helpHeight := lipgloss.Height(help)
+	contentHeight := m.height - headerHeight - playerHeight - helpHeight
+
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+
+	content := lipgloss.NewStyle().Height(contentHeight).Render(m.playlists.View())
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
@@ -515,9 +525,19 @@ func (m Model) renderPlaylists() string {
 
 func (m Model) renderTracks() string {
 	header := m.renderHeader()
-	content := m.tracks.View()
 	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
 	help := m.renderHelpBar()
+
+	headerHeight := lipgloss.Height(header)
+	playerHeight := lipgloss.Height(player)
+	helpHeight := lipgloss.Height(help)
+	contentHeight := m.height - headerHeight - playerHeight - helpHeight
+
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+
+	content := lipgloss.NewStyle().Height(contentHeight).Render(m.tracks.View())
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
@@ -529,9 +549,19 @@ func (m Model) renderTracks() string {
 
 func (m Model) renderAlbum() string {
 	header := m.renderHeader()
-	content := m.albumTracks.View()
 	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
 	help := m.renderHelpBar()
+
+	headerHeight := lipgloss.Height(header)
+	playerHeight := lipgloss.Height(player)
+	helpHeight := lipgloss.Height(help)
+	contentHeight := m.height - headerHeight - playerHeight - helpHeight
+
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+
+	content := lipgloss.NewStyle().Height(contentHeight).Render(m.albumTracks.View())
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
@@ -543,8 +573,17 @@ func (m Model) renderAlbum() string {
 
 func (m Model) renderDevices() string {
 	header := m.renderHeader()
-	content := m.devices.View()
 	help := m.styles.HelpBar.Render("↑/↓ navigate • enter select • esc back")
+
+	headerHeight := lipgloss.Height(header)
+	helpHeight := lipgloss.Height(help)
+	contentHeight := m.height - headerHeight - helpHeight
+
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+
+	content := lipgloss.NewStyle().Height(contentHeight).Render(m.devices.View())
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
@@ -559,19 +598,31 @@ func (m Model) renderSearch() string {
 	inputStyle := m.styles.Header.Copy().Padding(0, 1)
 	searchBox := inputStyle.Render("🔍 " + m.searchInput.View())
 
-	var content string
-	if m.hasSearchResults() {
-		content = m.searchResults.View()
-	} else if m.searching {
-		content = m.styles.Muted.Render("\n  Searching...")
-	} else if m.searchInput.Value() != "" && !m.searchInput.Focused() {
-		content = m.styles.Muted.Render("\n  No results found")
-	} else {
-		content = m.styles.Muted.Render("\n  Type your query and press Enter to search...")
-	}
-
 	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
 	help := m.styles.HelpBar.Render("enter search • ↑/↓ navigate results • esc back")
+
+	headerHeight := lipgloss.Height(header)
+	searchBoxHeight := lipgloss.Height(searchBox)
+	playerHeight := lipgloss.Height(player)
+	helpHeight := lipgloss.Height(help)
+	contentHeight := m.height - headerHeight - searchBoxHeight - playerHeight - helpHeight
+
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+
+	var contentView string
+	if m.hasSearchResults() {
+		contentView = m.searchResults.View()
+	} else if m.searching {
+		contentView = m.styles.Muted.Render("\n  Searching...")
+	} else if m.searchInput.Value() != "" && !m.searchInput.Focused() {
+		contentView = m.styles.Muted.Render("\n  No results found")
+	} else {
+		contentView = m.styles.Muted.Render("\n  Type your query and press Enter to search...")
+	}
+
+	content := lipgloss.NewStyle().Height(contentHeight).Render(contentView)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
