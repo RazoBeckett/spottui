@@ -47,7 +47,7 @@ func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) st
 	}
 
 	// Volume indicator
-	volumeIcon := fmt.Sprintf(" 🔊 %d%%", state.Device.Volume)
+	volumeStr := fmt.Sprintf("🔊 %d%%", state.Device.Volume)
 
 	// Progress bar
 	progressWidth := width - 24
@@ -66,9 +66,22 @@ func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) st
 	title := s.TrackTitle.Render(track.Name)
 	artist := s.TrackArtist.Render(artistStr)
 
-	line1 := lipgloss.JoinHorizontal(lipgloss.Center,
-		playIcon, " ", title, " - ", artist, shuffleIcon, repeatIcon, volumeIcon,
+	// Left side: play icon, track info, shuffle, repeat
+	leftContent := lipgloss.JoinHorizontal(lipgloss.Center,
+		playIcon, " ", title, " - ", artist, shuffleIcon, repeatIcon,
 	)
+
+	// Calculate spacing for right-aligned volume
+	leftWidth := lipgloss.Width(leftContent)
+	volumeWidth := lipgloss.Width(volumeStr)
+	availableWidth := width - 8 // account for padding
+	spacerWidth := availableWidth - leftWidth - volumeWidth
+	if spacerWidth < 1 {
+		spacerWidth = 1
+	}
+	spacer := strings.Repeat(" ", spacerWidth)
+
+	line1 := leftContent + spacer + s.Muted.Render(volumeStr)
 
 	line2 := lipgloss.JoinHorizontal(lipgloss.Center,
 		progressBar, "  ", s.PlaybackTime.Render(timeStr),

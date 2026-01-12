@@ -51,6 +51,10 @@ type ErrMsg struct {
 
 type DismissErrorMsg struct{}
 
+type VolumeChangedMsg struct {
+	Volume int
+}
+
 // Commands (functions that return tea.Cmd)
 
 func (m Model) scheduleErrorDismiss() tea.Cmd {
@@ -235,7 +239,7 @@ func (m Model) volumeUp() tea.Cmd {
 		}
 
 		m.client.Volume(ctx, newVol)
-		return PollPlaybackMsg{}
+		return VolumeChangedMsg{Volume: newVol}
 	}
 }
 
@@ -253,7 +257,7 @@ func (m Model) volumeDown() tea.Cmd {
 		}
 
 		m.client.Volume(ctx, newVol)
-		return PollPlaybackMsg{}
+		return VolumeChangedMsg{Volume: newVol}
 	}
 }
 

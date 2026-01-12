@@ -254,6 +254,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.showError = false
 		m.errMsg = ""
 		return m, nil
+
+	case VolumeChangedMsg:
+		if m.playbackState != nil {
+			m.playbackState.Device.Volume = spotify.Numeric(msg.Volume)
+		}
+		return m, nil
 	}
 
 	// Delegate to active view's sub-model
