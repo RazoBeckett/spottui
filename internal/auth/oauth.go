@@ -16,6 +16,7 @@ import (
 // Authenticator handles Spotify OAuth with PKCE flow
 type Authenticator struct {
 	auth         *spotifyauth.Authenticator
+	oauth2Config *oauth2.Config
 	codeVerifier string
 	state        string
 	tokenStore   *TokenStore
@@ -29,29 +30,49 @@ func NewAuthenticator(clientID, redirectURI string) (*Authenticator, error) {
 		return nil, fmt.Errorf("failed to generate code verifier: %w", err)
 	}
 
+	scopes := []string{
+		string(spotifyauth.ScopeUserReadPlaybackState),
+		string(spotifyauth.ScopeUserModifyPlaybackState),
+		string(spotifyauth.ScopeUserReadCurrentlyPlaying),
+		string(spotifyauth.ScopeUserLibraryRead),
+		string(spotifyauth.ScopeUserLibraryModify),
+		string(spotifyauth.ScopePlaylistReadPrivate),
+		string(spotifyauth.ScopePlaylistReadCollaborative),
+		string(spotifyauth.ScopePlaylistModifyPublic),
+		string(spotifyauth.ScopePlaylistModifyPrivate),
+		string(spotifyauth.ScopeUserReadPrivate),
+	}
+
 	auth := spotifyauth.New(
 		spotifyauth.WithClientID(clientID),
 		spotifyauth.WithRedirectURL(redirectURI),
 		spotifyauth.WithScopes(
-			// Playback control
 			spotifyauth.ScopeUserReadPlaybackState,
 			spotifyauth.ScopeUserModifyPlaybackState,
 			spotifyauth.ScopeUserReadCurrentlyPlaying,
-			// Library
 			spotifyauth.ScopeUserLibraryRead,
 			spotifyauth.ScopeUserLibraryModify,
-			// Playlists
 			spotifyauth.ScopePlaylistReadPrivate,
 			spotifyauth.ScopePlaylistReadCollaborative,
 			spotifyauth.ScopePlaylistModifyPublic,
 			spotifyauth.ScopePlaylistModifyPrivate,
-			// User info
 			spotifyauth.ScopeUserReadPrivate,
 		),
 	)
 
+	oauth2Cfg := &oauth2.Config{
+		ClientID: clientID,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://accounts.spotify.com/authorize",
+			TokenURL: "https://accounts.spotify.com/api/token",
+		},
+		RedirectURL: redirectURI,
+		Scopes:      scopes,
+	}
+
 	return &Authenticator{
 		auth:         auth,
+		oauth2Config: oauth2Cfg,
 		codeVerifier: verifier,
 		state:        randomString(16),
 		tokenStore:   NewTokenStore(),
@@ -156,18 +177,44 @@ func (a *Authenticator) startCallbackServer(clientChan chan *spotify.Client, err
 }
 
 func (a *Authenticator) clientFromToken(ctx context.Context, token *oauth2.Token) (*spotify.Client, error) {
-	// Refresh if expired
-	if !token.Valid() {
-		newToken, err := a.auth.RefreshToken(ctx, token)
-		if err != nil {
-			return nil, err
-		}
-		a.tokenStore.Save(newToken)
-		token = newToken
+	if !token.Valid() && token.RefreshToken == "" {
+		return nil, fmt.Errorf("token expired and no refresh token available")
 	}
 
-	httpClient := a.auth.Client(ctx, token)
-	return spotify.New(httpClient), nil
+	tokenSource := a.oauth2Config.TokenSource(ctx, token)
+	autoSaveSource := &autoSaveTokenSource{
+		source:     tokenSource,
+		tokenStore: a.tokenStore,
+	}
+
+	httpClient := oauth2.NewClient(ctx, autoSaveSource)
+	client := spotify.New(httpClient)
+
+	if _, err := client.CurrentUser(ctx); err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+type autoSaveTokenSource struct {
+	source     oauth2.TokenSource
+	tokenStore *TokenStore
+	lastToken  *oauth2.Token
+}
+
+func (s *autoSaveTokenSource) Token() (*oauth2.Token, error) {
+	token, err := s.source.Token()
+	if err != nil {
+		return nil, err
+	}
+
+	if s.lastToken == nil || token.AccessToken != s.lastToken.AccessToken {
+		s.tokenStore.Save(token)
+		s.lastToken = token
+	}
+
+	return token, nil
 }
 
 func openBrowser(url string) {
