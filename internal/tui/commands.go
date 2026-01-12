@@ -29,6 +29,10 @@ type PlaybackStateMsg struct {
 // PollPlaybackMsg triggers a playback state refresh
 type PollPlaybackMsg struct{}
 
+type DevicesLoadedMsg struct {
+	Devices []spotify.PlayerDevice
+}
+
 // ErrMsg contains an error from async operations
 type ErrMsg struct {
 	Err error
@@ -251,7 +255,6 @@ func (m Model) playTrack(track spotify.PlaylistTrack) tea.Cmd {
 			return nil
 		}
 
-		// Play the specific track from the playlist context
 		opts := &spotify.PlayOptions{
 			PlaybackContext: &m.selectedPlaylist.URI,
 			PlaybackOffset: &spotify.PlaybackOffset{
@@ -264,6 +267,34 @@ func (m Model) playTrack(track spotify.PlaylistTrack) tea.Cmd {
 		}
 
 		time.Sleep(200 * time.Millisecond)
+		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) fetchDevices() tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
+
+		devices, err := m.client.PlayerDevices(ctx)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		return DevicesLoadedMsg{Devices: devices}
+	}
+}
+
+func (m Model) transferPlayback(deviceID spotify.ID) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+
+		err := m.client.TransferPlayback(ctx, deviceID, true)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		time.Sleep(300 * time.Millisecond)
 		return PollPlaybackMsg{}
 	}
 }

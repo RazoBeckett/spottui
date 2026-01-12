@@ -156,3 +156,81 @@ func CreateTrackList(tracks []spotify.PlaylistTrack, s styles.Styles, currentTra
 
 	return l
 }
+
+type DeviceItem struct {
+	Device spotify.PlayerDevice
+}
+
+func (i DeviceItem) Title() string {
+	name := i.Device.Name
+	if i.Device.Active {
+		name += " (active)"
+	}
+	return name
+}
+
+func (i DeviceItem) Description() string {
+	return string(i.Device.Type)
+}
+
+func (i DeviceItem) FilterValue() string {
+	return i.Device.Name
+}
+
+type DeviceDelegate struct {
+	Styles styles.Styles
+}
+
+func (d DeviceDelegate) Height() int                             { return 2 }
+func (d DeviceDelegate) Spacing() int                            { return 0 }
+func (d DeviceDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d DeviceDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(DeviceItem)
+	if !ok {
+		return
+	}
+
+	isActive := i.Device.Active
+	isSelected := index == m.Index()
+
+	var titleStyle, descStyle lipgloss.Style
+
+	if isActive || isSelected {
+		titleStyle = d.Styles.ListItemActive
+	} else {
+		titleStyle = d.Styles.ListItem
+	}
+
+	descStyle = d.Styles.Muted
+
+	prefix := "  "
+	if isActive {
+		prefix = "● "
+	} else if isSelected {
+		prefix = "▶ "
+	}
+
+	title := titleStyle.Render(prefix + i.Title())
+	desc := descStyle.Render("  " + i.Description())
+
+	fmt.Fprint(w, title+"\n"+desc)
+}
+
+func CreateDeviceList(devices []spotify.PlayerDevice, s styles.Styles, width, height int) list.Model {
+	items := make([]list.Item, len(devices))
+	for i, d := range devices {
+		items[i] = DeviceItem{Device: d}
+	}
+
+	delegate := DeviceDelegate{Styles: s}
+
+	l := list.New(items, delegate, width, height)
+	l.Title = "Select Device"
+	l.SetShowStatusBar(true)
+	l.SetFilteringEnabled(false)
+	l.Styles.Title = s.ListTitle
+	l.SetShowHelp(false)
+
+	return l
+}

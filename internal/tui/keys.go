@@ -26,6 +26,7 @@ type KeyMap struct {
 	Quit    key.Binding
 	Search  key.Binding
 	Refresh key.Binding
+	Devices key.Binding
 }
 
 // DefaultKeyMap returns the default keybindings
@@ -99,6 +100,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("ctrl+r"),
 			key.WithHelp("ctrl+r", "refresh"),
 		),
+		Devices: key.NewBinding(
+			key.WithKeys("d"),
+			key.WithHelp("d", "devices"),
+		),
 	}
 }
 
@@ -114,6 +119,6 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Enter, k.Back, k.Search},
 		{k.PlayPause, k.Next, k.Prev},
 		{k.VolumeUp, k.VolumeDown, k.Shuffle, k.Repeat},
-		{k.Help, k.Quit, k.Refresh},
+		{k.Help, k.Quit, k.Refresh, k.Devices},
 	}
 }

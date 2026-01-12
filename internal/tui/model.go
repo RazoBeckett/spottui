@@ -21,6 +21,7 @@ const (
 	ViewLoading View = iota
 	ViewPlaylists
 	ViewTracks
+	ViewDevices
 	ViewHelp
 )
 
@@ -41,6 +42,7 @@ type Model struct {
 	spinner   spinner.Model
 	playlists list.Model
 	tracks    list.Model
+	devices   list.Model
 
 	// Data
 	currentUser      *spotify.PrivateUser
@@ -48,6 +50,7 @@ type Model struct {
 	selectedPlaylist *spotify.SimplePlaylist
 	tracksData       []spotify.PlaylistTrack
 	playbackState    *spotify.PlayerState
+	devicesData      []spotify.PlayerDevice
 
 	// Styling and keybindings
 	styles styles.Styles
@@ -157,6 +160,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case PollPlaybackMsg:
 		return m, tea.Batch(m.pollPlaybackState(), m.schedulePlaybackPoll())
 
+	case DevicesLoadedMsg:
+		m.devicesData = msg.Devices
+		listHeight := m.height - 12
+		if listHeight < 5 {
+			listHeight = 5
+		}
+		m.devices = views.CreateDeviceList(msg.Devices, m.styles, m.width-4, listHeight)
+		m.view = ViewDevices
+		return m, nil
+
 	case ErrMsg:
 		m.err = msg.Err
 		return m, nil
@@ -191,6 +204,8 @@ func (m Model) View() string {
 		return m.renderPlaylists()
 	case ViewTracks:
 		return m.renderTracks()
+	case ViewDevices:
+		return m.renderDevices()
 	case ViewHelp:
 		return m.renderHelp()
 	default:
@@ -247,6 +262,10 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keys.Refresh):
 		return m, m.pollPlaybackState()
+
+	case key.Matches(msg, m.keys.Devices):
+		m.prevView = m.view
+		return m, m.fetchDevices()
 	}
 
 	// View-specific keybindings
@@ -256,6 +275,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case ViewTracks:
 		return m.handleTrackKeys(msg)
+
+	case ViewDevices:
+		return m.handleDeviceKeys(msg)
 	}
 
 	return m, nil
@@ -283,6 +305,24 @@ func (m Model) handleTrackKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.tracks, cmd = m.tracks.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleDeviceKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if key.Matches(msg, m.keys.Enter) {
+		if item, ok := m.devices.SelectedItem().(views.DeviceItem); ok {
+			m.view = m.prevView
+			return m, m.transferPlayback(item.Device.ID)
+		}
+	}
+
+	if key.Matches(msg, m.keys.Back) {
+		m.view = m.prevView
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	m.devices, cmd = m.devices.Update(msg)
 	return m, cmd
 }
 
@@ -320,6 +360,18 @@ func (m Model) renderTracks() string {
 		header,
 		content,
 		player,
+		help,
+	)
+}
+
+func (m Model) renderDevices() string {
+	header := m.renderHeader()
+	content := m.devices.View()
+	help := m.styles.HelpBar.Render("↑/↓ navigate • enter select • esc back")
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		header,
+		content,
 		help,
 	)
 }
