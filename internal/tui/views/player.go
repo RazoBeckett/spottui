@@ -28,26 +28,26 @@ func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) st
 	// Play/pause indicator
 	playIcon := "▶"
 	if state.Playing {
-		playIcon = "⏸"
+		playIcon = "󰏤"
 	}
 
 	// Shuffle indicator
 	shuffleIcon := ""
 	if state.ShuffleState {
-		shuffleIcon = " 🔀"
+		shuffleIcon = " 󰒝 "
 	}
 
 	// Repeat indicator
 	repeatIcon := ""
 	switch state.RepeatState {
 	case "context":
-		repeatIcon = " 🔁"
+		repeatIcon = " 󰑖 "
 	case "track":
-		repeatIcon = " 🔂"
+		repeatIcon = " 󰑘 "
 	}
 
 	// Volume indicator
-	volumeStr := fmt.Sprintf("🔊 %d%%", state.Device.Volume)
+	volumeStr := fmt.Sprintf("󰕾 %d%%", state.Device.Volume)
 
 	// Progress bar
 	progressWidth := width - 24
