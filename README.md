@@ -2,12 +2,16 @@
 
 A beautiful terminal-based Spotify client built with Go, using the Charmbracelet ecosystem (Bubble Tea, Lip Gloss, Bubbles).
 
+![SpotTUI Demo](demo.gif)
+
 ## Features
 
-- Browse your playlists
-- View tracks in playlists
+- Browse your playlists and tracks
+- Global search for tracks, albums, and playlists
+- Recently played history
 - Playback controls (play/pause, next, previous, volume, shuffle, repeat)
-- Live now-playing display
+- Live now-playing display with progress bar
+- Device selector for switching playback devices
 - Fuzzy filtering for playlists and tracks
 - Vim-style keybindings
 - Spotify-inspired color theme
@@ -65,8 +69,11 @@ On first run, your browser will open for Spotify authentication. After authorizi
 | `↑` / `k` | Move up |
 | `↓` / `j` | Move down |
 | `Enter` | Select item |
-| `Esc` | Go back |
+| `Esc` / `Backspace` | Go back |
 | `/` | Filter list |
+| `S` | Global search |
+| `H` | Recently played |
+| `d` | Device selector |
 
 ### Playback
 | Key | Action |
@@ -77,7 +84,7 @@ On first run, your browser will open for Spotify authentication. After authorizi
 | `+` / `=` | Volume up |
 | `-` | Volume down |
 | `s` | Toggle shuffle |
-| `r` | Cycle repeat mode |
+| `r` | Cycle repeat mode (off → playlist → track) |
 
 ### General
 | Key | Action |
@@ -105,6 +112,7 @@ spottui/
 │       └── views/
 │           ├── list.go        # List components
 │           └── player.go      # Now playing component
+├── demo.tape                   # VHS demo script
 ├── .env.example
 ├── go.mod
 └── go.sum
@@ -117,6 +125,14 @@ spottui/
 - **Bubbles**: Pre-built components (lists, spinners)
 - **Lip Gloss**: Terminal styling
 - **zmb3/spotify**: Spotify Web API client library
+
+## Generate Demo GIF
+
+To regenerate the demo GIF, install [VHS](https://github.com/charmbracelet/vhs) and run:
+
+```bash
+vhs demo.tape
+```
 
 ## License
 
