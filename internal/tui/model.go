@@ -22,6 +22,7 @@ const (
 	ViewLoading View = iota
 	ViewPlaylists
 	ViewTracks
+	ViewAlbum
 	ViewDevices
 	ViewSearch
 	ViewHelp
@@ -34,7 +35,9 @@ type Model struct {
 	prevView View // For returning from overlays
 	width    int
 	height   int
-	err      error
+
+	errMsg    string
+	showError bool
 
 	// Spotify client
 	client *spotify.Client
@@ -44,19 +47,24 @@ type Model struct {
 	spinner       spinner.Model
 	playlists     list.Model
 	tracks        list.Model
+	albumTracks   list.Model
 	devices       list.Model
 	searchInput   textinput.Model
 	searchResults list.Model
 
 	// Data
-	currentUser      *spotify.PrivateUser
-	playlistsData    []spotify.SimplePlaylist
-	selectedPlaylist *spotify.SimplePlaylist
-	tracksData       []spotify.PlaylistTrack
-	playbackState    *spotify.PlayerState
-	devicesData      []spotify.PlayerDevice
-	searchTracksData []spotify.FullTrack
-	searching        bool
+	currentUser         *spotify.PrivateUser
+	playlistsData       []spotify.SimplePlaylist
+	selectedPlaylist    *spotify.SimplePlaylist
+	selectedAlbum       *spotify.SimpleAlbum
+	tracksData          []spotify.PlaylistTrack
+	albumTracksData     []spotify.SimpleTrack
+	playbackState       *spotify.PlayerState
+	devicesData         []spotify.PlayerDevice
+	searchTracksData    []spotify.FullTrack
+	searchAlbumsData    []spotify.SimpleAlbum
+	searchPlaylistsData []spotify.SimplePlaylist
+	searching           bool
 
 	// Styling and keybindings
 	styles styles.Styles
@@ -106,6 +114,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.view == ViewTracks && m.tracks.FilterState() == list.Filtering {
 			var cmd tea.Cmd
 			m.tracks, cmd = m.tracks.Update(msg)
+			return m, cmd
+		}
+		if m.view == ViewAlbum && m.albumTracks.FilterState() == list.Filtering {
+			var cmd tea.Cmd
+			m.albumTracks, cmd = m.albumTracks.Update(msg)
 			return m, cmd
 		}
 		return m.handleKeyPress(msg)
@@ -159,6 +172,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.view = ViewTracks
 		return m, nil
 
+	case AlbumTracksLoadedMsg:
+		m.albumTracksData = msg.Tracks
+		listHeight := m.height - 12
+		if listHeight < 5 {
+			listHeight = 5
+		}
+		currentTrack := ""
+		if m.playbackState != nil && m.playbackState.Item != nil {
+			currentTrack = string(m.playbackState.Item.URI)
+		}
+		m.albumTracks = views.CreateAlbumTrackList(msg.Tracks, m.styles, currentTrack, m.width-4, listHeight)
+		if m.selectedAlbum != nil {
+			m.albumTracks.Title = m.selectedAlbum.Name
+		}
+		m.view = ViewAlbum
+		return m, nil
+
 	case PlaybackStateMsg:
 		m.playbackState = msg.State
 		// Update track list delegate to show currently playing
@@ -185,6 +215,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case SearchResultsMsg:
 		m.searching = false
 		m.searchTracksData = msg.Tracks
+		m.searchAlbumsData = msg.Albums
+		m.searchPlaylistsData = msg.Playlists
 		listHeight := m.height - 14
 		if listHeight < 5 {
 			listHeight = 5
@@ -193,11 +225,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.playbackState != nil && m.playbackState.Item != nil {
 			currentTrack = string(m.playbackState.Item.URI)
 		}
-		m.searchResults = views.CreateSearchResultsList(msg.Tracks, m.styles, currentTrack, m.width-4, listHeight)
+		m.searchResults = views.CreateSearchResultsList(msg.Tracks, msg.Albums, msg.Playlists, m.styles, currentTrack, m.width-4, listHeight)
 		return m, nil
 
 	case ErrMsg:
-		m.err = msg.Err
+		m.errMsg = msg.Err.Error()
+		m.showError = true
+		return m, m.scheduleErrorDismiss()
+
+	case DismissErrorMsg:
+		m.showError = false
+		m.errMsg = ""
 		return m, nil
 	}
 
@@ -219,26 +257,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View renders the UI
 func (m Model) View() string {
-	if m.err != nil {
-		return m.styles.Error.Render("Error: " + m.err.Error() + "\n\nPress q to quit.")
-	}
+	var content string
 
 	switch m.view {
 	case ViewLoading:
-		return m.renderLoading()
+		content = m.renderLoading()
 	case ViewPlaylists:
-		return m.renderPlaylists()
+		content = m.renderPlaylists()
 	case ViewTracks:
-		return m.renderTracks()
+		content = m.renderTracks()
+	case ViewAlbum:
+		content = m.renderAlbum()
 	case ViewDevices:
-		return m.renderDevices()
+		content = m.renderDevices()
 	case ViewSearch:
-		return m.renderSearch()
+		content = m.renderSearch()
 	case ViewHelp:
-		return m.renderHelp()
+		content = m.renderHelp()
 	default:
-		return "Unknown view"
+		content = "Unknown view"
 	}
+
+	if m.showError {
+		errorBox := m.styles.Error.Render("⚠ " + m.errMsg)
+		return content + "\n" + errorBox
+	}
+
+	return content
 }
 
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -266,6 +311,10 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		if m.view == ViewTracks {
 			m.view = ViewPlaylists
+			return m, nil
+		}
+		if m.view == ViewAlbum {
+			m.view = ViewSearch
 			return m, nil
 		}
 
@@ -314,6 +363,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case ViewTracks:
 		return m.handleTrackKeys(msg)
 
+	case ViewAlbum:
+		return m.handleAlbumKeys(msg)
+
 	case ViewDevices:
 		return m.handleDeviceKeys(msg)
 
@@ -346,6 +398,18 @@ func (m Model) handleTrackKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.tracks, cmd = m.tracks.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleAlbumKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if key.Matches(msg, m.keys.Enter) {
+		if item, ok := m.albumTracks.SelectedItem().(views.AlbumTrackItem); ok {
+			return m, m.playAlbumTrack(item.Track)
+		}
+	}
+
+	var cmd tea.Cmd
+	m.albumTracks, cmd = m.albumTracks.Update(msg)
 	return m, cmd
 }
 
@@ -392,9 +456,18 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if key.Matches(msg, m.keys.Enter) {
-		if len(m.searchTracksData) > 0 {
-			if item, ok := m.searchResults.SelectedItem().(views.SearchTrackItem); ok {
-				return m, m.playSearchTrack(item.Track)
+		if m.hasSearchResults() {
+			if item, ok := m.searchResults.SelectedItem().(views.SearchItem); ok {
+				switch item.Type {
+				case views.SearchResultTrack:
+					return m, m.playSearchItem(item)
+				case views.SearchResultAlbum:
+					m.selectedAlbum = item.Album
+					return m, m.fetchAlbumTracks(item.Album.ID)
+				case views.SearchResultPlaylist:
+					m.selectedPlaylist = item.Playlist
+					return m, m.fetchTracks(item.Playlist.ID)
+				}
 			}
 		}
 	}
@@ -405,7 +478,7 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, textinput.Blink
 	}
 
-	if len(m.searchTracksData) > 0 {
+	if m.hasSearchResults() {
 		var cmd tea.Cmd
 		m.searchResults, cmd = m.searchResults.Update(msg)
 		return m, cmd
@@ -414,7 +487,9 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// Render functions
+func (m Model) hasSearchResults() bool {
+	return len(m.searchTracksData) > 0 || len(m.searchAlbumsData) > 0 || len(m.searchPlaylistsData) > 0
+}
 
 func (m Model) renderLoading() string {
 	return lipgloss.Place(
@@ -452,6 +527,20 @@ func (m Model) renderTracks() string {
 	)
 }
 
+func (m Model) renderAlbum() string {
+	header := m.renderHeader()
+	content := m.albumTracks.View()
+	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	help := m.renderHelpBar()
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		header,
+		content,
+		player,
+		help,
+	)
+}
+
 func (m Model) renderDevices() string {
 	header := m.renderHeader()
 	content := m.devices.View()
@@ -471,7 +560,7 @@ func (m Model) renderSearch() string {
 	searchBox := inputStyle.Render("🔍 " + m.searchInput.View())
 
 	var content string
-	if len(m.searchTracksData) > 0 {
+	if m.hasSearchResults() {
 		content = m.searchResults.View()
 	} else if m.searching {
 		content = m.styles.Muted.Render("\n  Searching...")

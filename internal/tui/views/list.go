@@ -157,6 +157,92 @@ func CreateTrackList(tracks []spotify.PlaylistTrack, s styles.Styles, currentTra
 	return l
 }
 
+type AlbumTrackItem struct {
+	Track spotify.SimpleTrack
+	Index int
+}
+
+func (i AlbumTrackItem) Title() string {
+	if i.Track.Name == "" {
+		return "Unknown Track"
+	}
+	return i.Track.Name
+}
+
+func (i AlbumTrackItem) Description() string {
+	if len(i.Track.Artists) == 0 {
+		return "Unknown Artist"
+	}
+	artists := make([]string, len(i.Track.Artists))
+	for j, a := range i.Track.Artists {
+		artists[j] = a.Name
+	}
+	return strings.Join(artists, ", ")
+}
+
+func (i AlbumTrackItem) FilterValue() string {
+	return i.Title() + " " + i.Description()
+}
+
+type AlbumTrackDelegate struct {
+	Styles       styles.Styles
+	CurrentTrack string
+}
+
+func (d AlbumTrackDelegate) Height() int                             { return 2 }
+func (d AlbumTrackDelegate) Spacing() int                            { return 0 }
+func (d AlbumTrackDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d AlbumTrackDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(AlbumTrackItem)
+	if !ok {
+		return
+	}
+
+	isPlaying := string(i.Track.URI) == d.CurrentTrack
+	isSelected := index == m.Index()
+
+	var titleStyle, descStyle lipgloss.Style
+
+	if isPlaying || isSelected {
+		titleStyle = d.Styles.ListItemActive
+	} else {
+		titleStyle = d.Styles.ListItem
+	}
+
+	descStyle = d.Styles.Muted
+
+	prefix := ""
+	if isPlaying {
+		prefix = "♫ "
+	} else if isSelected {
+		prefix = "▶ "
+	}
+
+	title := titleStyle.Render(prefix + i.Title())
+	desc := descStyle.Render("  󰳩 " + i.Description())
+
+	fmt.Fprint(w, title+"\n"+desc)
+}
+
+func CreateAlbumTrackList(tracks []spotify.SimpleTrack, s styles.Styles, currentTrackURI string, width, height int) list.Model {
+	items := make([]list.Item, len(tracks))
+	for i, t := range tracks {
+		items[i] = AlbumTrackItem{Track: t, Index: i}
+	}
+
+	delegate := AlbumTrackDelegate{Styles: s, CurrentTrack: currentTrackURI}
+
+	l := list.New(items, delegate, width, height)
+	l.Title = "Album"
+	l.SetShowStatusBar(true)
+	l.SetFilteringEnabled(true)
+	l.Styles.Title = s.ListTitle
+	l.SetShowHelp(false)
+
+	return l
+}
+
 type DeviceItem struct {
 	Device spotify.PlayerDevice
 }
@@ -235,48 +321,107 @@ func CreateDeviceList(devices []spotify.PlayerDevice, s styles.Styles, width, he
 	return l
 }
 
-type SearchTrackItem struct {
-	Track spotify.FullTrack
+type SearchResultType int
+
+const (
+	SearchResultTrack SearchResultType = iota
+	SearchResultAlbum
+	SearchResultPlaylist
+)
+
+type SearchItem struct {
+	Type     SearchResultType
+	Track    *spotify.FullTrack
+	Album    *spotify.SimpleAlbum
+	Playlist *spotify.SimplePlaylist
 }
 
-func (i SearchTrackItem) Title() string {
-	if i.Track.Name == "" {
-		return "Unknown Track"
+func (i SearchItem) Title() string {
+	switch i.Type {
+	case SearchResultTrack:
+		if i.Track.Name == "" {
+			return "Unknown Track"
+		}
+		return i.Track.Name
+	case SearchResultAlbum:
+		if i.Album.Name == "" {
+			return "Unknown Album"
+		}
+		return i.Album.Name
+	case SearchResultPlaylist:
+		if i.Playlist.Name == "" {
+			return "Unknown Playlist"
+		}
+		return i.Playlist.Name
 	}
-	return i.Track.Name
+	return "Unknown"
 }
 
-func (i SearchTrackItem) Description() string {
-	if len(i.Track.Artists) == 0 {
-		return "Unknown Artist"
+func (i SearchItem) Description() string {
+	switch i.Type {
+	case SearchResultTrack:
+		artists := artistNames(i.Track.Artists)
+		return artists + " - Song"
+	case SearchResultAlbum:
+		artists := simpleArtistNames(i.Album.Artists)
+		return artists + " - Album"
+	case SearchResultPlaylist:
+		owner := "Unknown"
+		if i.Playlist.Owner.DisplayName != "" {
+			owner = i.Playlist.Owner.DisplayName
+		}
+		return owner + " - Playlist"
 	}
-	artists := make([]string, len(i.Track.Artists))
-	for j, a := range i.Track.Artists {
-		artists[j] = a.Name
-	}
-	return strings.Join(artists, ", ")
+	return ""
 }
 
-func (i SearchTrackItem) FilterValue() string {
+func (i SearchItem) FilterValue() string {
 	return i.Title() + " " + i.Description()
 }
 
-type SearchTrackDelegate struct {
+func (i SearchItem) URI() string {
+	switch i.Type {
+	case SearchResultTrack:
+		return string(i.Track.URI)
+	case SearchResultAlbum:
+		return string(i.Album.URI)
+	case SearchResultPlaylist:
+		return string(i.Playlist.URI)
+	}
+	return ""
+}
+
+func artistNames(artists []spotify.SimpleArtist) string {
+	if len(artists) == 0 {
+		return "Unknown Artist"
+	}
+	names := make([]string, len(artists))
+	for j, a := range artists {
+		names[j] = a.Name
+	}
+	return strings.Join(names, ", ")
+}
+
+func simpleArtistNames(artists []spotify.SimpleArtist) string {
+	return artistNames(artists)
+}
+
+type SearchItemDelegate struct {
 	Styles       styles.Styles
 	CurrentTrack string
 }
 
-func (d SearchTrackDelegate) Height() int                             { return 2 }
-func (d SearchTrackDelegate) Spacing() int                            { return 0 }
-func (d SearchTrackDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+func (d SearchItemDelegate) Height() int                             { return 2 }
+func (d SearchItemDelegate) Spacing() int                            { return 0 }
+func (d SearchItemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
-func (d SearchTrackDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(SearchTrackItem)
+func (d SearchItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(SearchItem)
 	if !ok {
 		return
 	}
 
-	isPlaying := string(i.Track.URI) == d.CurrentTrack
+	isPlaying := i.URI() == d.CurrentTrack
 	isSelected := index == m.Index()
 
 	var titleStyle, descStyle lipgloss.Style
@@ -302,13 +447,23 @@ func (d SearchTrackDelegate) Render(w io.Writer, m list.Model, index int, listIt
 	fmt.Fprint(w, title+"\n"+desc)
 }
 
-func CreateSearchResultsList(tracks []spotify.FullTrack, s styles.Styles, currentTrackURI string, width, height int) list.Model {
-	items := make([]list.Item, len(tracks))
-	for i, t := range tracks {
-		items[i] = SearchTrackItem{Track: t}
+func CreateSearchResultsList(tracks []spotify.FullTrack, albums []spotify.SimpleAlbum, playlists []spotify.SimplePlaylist, s styles.Styles, currentTrackURI string, width, height int) list.Model {
+	var items []list.Item
+
+	for _, t := range tracks {
+		track := t
+		items = append(items, SearchItem{Type: SearchResultTrack, Track: &track})
+	}
+	for _, a := range albums {
+		album := a
+		items = append(items, SearchItem{Type: SearchResultAlbum, Album: &album})
+	}
+	for _, p := range playlists {
+		playlist := p
+		items = append(items, SearchItem{Type: SearchResultPlaylist, Playlist: &playlist})
 	}
 
-	delegate := SearchTrackDelegate{Styles: s, CurrentTrack: currentTrackURI}
+	delegate := SearchItemDelegate{Styles: s, CurrentTrack: currentTrackURI}
 
 	l := list.New(items, delegate, width, height)
 	l.Title = "Search Results"
