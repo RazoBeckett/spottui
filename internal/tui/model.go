@@ -647,7 +647,7 @@ func (m Model) renderHeader() string {
 
 func (m Model) renderHelpBar() string {
 	return m.styles.HelpBar.Render(
-		"↑/↓ navigate • enter select • esc back • space play/pause • n/p next/prev • +/- volume • ? help • q quit",
+		"↑/↓ navigate • enter select • esc back • space play/pause • n/p next/prev • +/- vol • s shuffle • r repeat • S search • d devices • ? help • q quit",
 	)
 }
 
@@ -662,6 +662,7 @@ func (m Model) renderHelp() string {
 │  enter    Select item               │
 │  esc      Go back                   │
 │  /        Filter list               │
+│  S        Global search             │
 │                                     │
 │  Playback                           │
 │  space    Play/Pause                │
@@ -673,6 +674,7 @@ func (m Model) renderHelp() string {
 │  r        Cycle repeat mode         │
 │                                     │
 │  General                            │
+│  d        Device selector           │
 │  ?        Toggle help               │
 │  ctrl+r   Refresh                   │
 │  q        Quit                      │
