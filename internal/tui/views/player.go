@@ -83,9 +83,16 @@ func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) st
 
 	line1 := leftContent + spacer + s.Muted.Render(volumeStr)
 
-	line2 := lipgloss.JoinHorizontal(lipgloss.Center,
-		progressBar, "  ", s.PlaybackTime.Render(timeStr),
-	)
+	timeDisplay := s.PlaybackTime.Render(timeStr)
+	timeWidth := lipgloss.Width(timeDisplay)
+	barWidth := lipgloss.Width(progressBar)
+	line2SpacerWidth := availableWidth - barWidth - timeWidth
+	if line2SpacerWidth < 2 {
+		line2SpacerWidth = 2
+	}
+	line2Spacer := strings.Repeat(" ", line2SpacerWidth)
+
+	line2 := progressBar + line2Spacer + timeDisplay
 
 	content := lipgloss.JoinVertical(lipgloss.Left, line1, line2)
 
