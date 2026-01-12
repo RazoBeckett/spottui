@@ -474,3 +474,21 @@ func CreateSearchResultsList(tracks []spotify.FullTrack, albums []spotify.Simple
 
 	return l
 }
+
+func CreateHistoryList(items []spotify.RecentlyPlayedItem, s styles.Styles, currentTrackURI string, width, height int) list.Model {
+	listItems := make([]list.Item, len(items))
+	for i, item := range items {
+		listItems[i] = AlbumTrackItem{Track: item.Track, Index: i}
+	}
+
+	delegate := AlbumTrackDelegate{Styles: s, CurrentTrack: currentTrackURI}
+
+	l := list.New(listItems, delegate, width, height)
+	l.Title = "Recently Played"
+	l.SetShowStatusBar(true)
+	l.SetFilteringEnabled(true)
+	l.Styles.Title = s.ListTitle
+	l.SetShowHelp(false)
+
+	return l
+}

@@ -40,6 +40,10 @@ type AlbumTracksLoadedMsg struct {
 	Tracks []spotify.SimpleTrack
 }
 
+type HistoryLoadedMsg struct {
+	Items []spotify.RecentlyPlayedItem
+}
+
 // ErrMsg contains an error from async operations
 type ErrMsg struct {
 	Err error
@@ -487,6 +491,63 @@ func (m Model) playSearchItem(item views.SearchItem) tea.Cmd {
 				PlaybackContext: &item.Playlist.URI,
 				DeviceID:        activeDeviceID,
 			}
+		}
+
+		if err := m.client.PlayOpt(ctx, opts); err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		time.Sleep(200 * time.Millisecond)
+		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) fetchRecentlyPlayed() tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
+
+		items, err := m.client.PlayerRecentlyPlayed(ctx)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		return HistoryLoadedMsg{Items: items}
+	}
+}
+
+func (m Model) playHistoryTrack(track spotify.SimpleTrack) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+
+		devices, err := m.client.PlayerDevices(ctx)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		var activeDeviceID *spotify.ID
+		for _, d := range devices {
+			if d.Active {
+				activeDeviceID = &d.ID
+				break
+			}
+		}
+
+		if activeDeviceID == nil && len(devices) > 0 {
+			activeDeviceID = &devices[0].ID
+			if err := m.client.TransferPlayback(ctx, *activeDeviceID, false); err != nil {
+				return ErrMsg{Err: err}
+			}
+			time.Sleep(300 * time.Millisecond)
+		}
+
+		if activeDeviceID == nil {
+			return ErrMsg{Err: fmt.Errorf("no Spotify devices available - open Spotify on a device first")}
+		}
+
+		opts := &spotify.PlayOptions{
+			URIs:     []spotify.URI{track.URI},
+			DeviceID: activeDeviceID,
 		}
 
 		if err := m.client.PlayOpt(ctx, opts); err != nil {

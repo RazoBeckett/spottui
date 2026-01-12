@@ -25,6 +25,7 @@ const (
 	ViewAlbum
 	ViewDevices
 	ViewSearch
+	ViewHistory
 	ViewHelp
 )
 
@@ -51,6 +52,7 @@ type Model struct {
 	devices       list.Model
 	searchInput   textinput.Model
 	searchResults list.Model
+	historyTracks list.Model
 
 	// Data
 	currentUser         *spotify.PrivateUser
@@ -64,6 +66,7 @@ type Model struct {
 	searchTracksData    []spotify.FullTrack
 	searchAlbumsData    []spotify.SimpleAlbum
 	searchPlaylistsData []spotify.SimplePlaylist
+	historyData         []spotify.RecentlyPlayedItem
 	searching           bool
 
 	// Styling and keybindings
@@ -228,6 +231,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searchResults = views.CreateSearchResultsList(msg.Tracks, msg.Albums, msg.Playlists, m.styles, currentTrack, m.width-4, listHeight)
 		return m, nil
 
+	case HistoryLoadedMsg:
+		m.historyData = msg.Items
+		listHeight := m.height - 12
+		if listHeight < 5 {
+			listHeight = 5
+		}
+		currentTrack := ""
+		if m.playbackState != nil && m.playbackState.Item != nil {
+			currentTrack = string(m.playbackState.Item.URI)
+		}
+		m.historyTracks = views.CreateHistoryList(msg.Items, m.styles, currentTrack, m.width-4, listHeight)
+		m.view = ViewHistory
+		return m, nil
+
 	case ErrMsg:
 		m.errMsg = msg.Err.Error()
 		m.showError = true
@@ -272,6 +289,8 @@ func (m Model) View() string {
 		content = m.renderDevices()
 	case ViewSearch:
 		content = m.renderSearch()
+	case ViewHistory:
+		content = m.renderHistory()
 	case ViewHelp:
 		content = m.renderHelp()
 	default:
@@ -353,6 +372,10 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.searchInput.Focus()
 		m.searchTracksData = nil
 		return m, textinput.Blink
+
+	case key.Matches(msg, m.keys.History):
+		m.prevView = m.view
+		return m, m.fetchRecentlyPlayed()
 	}
 
 	// View-specific keybindings
@@ -371,6 +394,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case ViewSearch:
 		return m.handleSearchKeys(msg)
+
+	case ViewHistory:
+		return m.handleHistoryKeys(msg)
 	}
 
 	return m, nil
@@ -489,6 +515,23 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m Model) hasSearchResults() bool {
 	return len(m.searchTracksData) > 0 || len(m.searchAlbumsData) > 0 || len(m.searchPlaylistsData) > 0
+}
+
+func (m Model) handleHistoryKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if key.Matches(msg, m.keys.Enter) {
+		if item, ok := m.historyTracks.SelectedItem().(views.AlbumTrackItem); ok {
+			return m, m.playHistoryTrack(item.Track)
+		}
+	}
+
+	if key.Matches(msg, m.keys.Back) {
+		m.view = m.prevView
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	m.historyTracks, cmd = m.historyTracks.Update(msg)
+	return m, cmd
 }
 
 func (m Model) renderLoading() string {
@@ -633,6 +676,30 @@ func (m Model) renderSearch() string {
 	)
 }
 
+func (m Model) renderHistory() string {
+	header := m.renderHeader()
+	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	help := m.renderHelpBar()
+
+	headerHeight := lipgloss.Height(header)
+	playerHeight := lipgloss.Height(player)
+	helpHeight := lipgloss.Height(help)
+	contentHeight := m.height - headerHeight - playerHeight - helpHeight
+
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+
+	content := lipgloss.NewStyle().Height(contentHeight).Render(m.historyTracks.View())
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		header,
+		content,
+		player,
+		help,
+	)
+}
+
 func (m Model) renderHeader() string {
 	userName := "Spotify User"
 	if m.currentUser != nil && m.currentUser.DisplayName != "" {
@@ -647,7 +714,7 @@ func (m Model) renderHeader() string {
 
 func (m Model) renderHelpBar() string {
 	return m.styles.HelpBar.Render(
-		"↑/↓ navigate • enter select • esc back • space play/pause • n/p next/prev • +/- vol • s shuffle • r repeat • S search • d devices • ? help • q quit",
+		"↑/↓ navigate • enter select • esc back • space play/pause • n/p next/prev • +/- vol • s shuffle • r repeat • S search • H history • d devices • ? help • q quit",
 	)
 }
 
@@ -674,6 +741,7 @@ func (m Model) renderHelp() string {
 │  r        Cycle repeat mode         │
 │                                     │
 │  General                            │
+│  H        Recently played           │
 │  d        Device selector           │
 │  ?        Toggle help               │
 │  ctrl+r   Refresh                   │

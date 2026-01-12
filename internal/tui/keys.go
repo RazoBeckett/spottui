@@ -28,6 +28,7 @@ type KeyMap struct {
 	GlobalSearch key.Binding
 	Refresh      key.Binding
 	Devices      key.Binding
+	History      key.Binding
 }
 
 // DefaultKeyMap returns the default keybindings
@@ -109,6 +110,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("d"),
 			key.WithHelp("d", "devices"),
 		),
+		History: key.NewBinding(
+			key.WithKeys("H"),
+			key.WithHelp("H", "recently played"),
+		),
 	}
 }
 
@@ -124,6 +129,6 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Enter, k.Back, k.Search, k.GlobalSearch},
 		{k.PlayPause, k.Next, k.Prev},
 		{k.VolumeUp, k.VolumeDown, k.Shuffle, k.Repeat},
-		{k.Help, k.Quit, k.Refresh, k.Devices},
+		{k.Help, k.Quit, k.Refresh, k.Devices, k.History},
 	}
 }
