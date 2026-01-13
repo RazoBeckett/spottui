@@ -2,6 +2,13 @@
 
 ## Recently Completed (Jan 14, 2026)
 
+- [x] **Loading skeletons fix** - @razobeckett
+  - Fixed skeleton not displaying: view now switches BEFORE fetch commands
+  - Updated all handlers: playlist, album, artist, search, history, devices
+  - Removed redundant view assignments from message handlers
+  - Files: `internal/tui/handlers.go`, `internal/tui/model.go`
+  - Commit: `7480fbc`
+
 - [x] **Loading skeletons** - @razobeckett
   - Added `renderSkeleton()` function using ░ block characters
   - Skeleton displays placeholder bars mimicking list item structure
