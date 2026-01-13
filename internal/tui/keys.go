@@ -13,13 +13,15 @@ type KeyMap struct {
 	Back  key.Binding
 
 	// Playback
-	PlayPause  key.Binding
-	Next       key.Binding
-	Prev       key.Binding
-	VolumeUp   key.Binding
-	VolumeDown key.Binding
-	Shuffle    key.Binding
-	Repeat     key.Binding
+	PlayPause    key.Binding
+	Next         key.Binding
+	Prev         key.Binding
+	VolumeUp     key.Binding
+	VolumeDown   key.Binding
+	Shuffle      key.Binding
+	Repeat       key.Binding
+	SeekBackward key.Binding
+	SeekForward  key.Binding
 
 	// App
 	Help          key.Binding
@@ -90,6 +92,14 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("r"),
 			key.WithHelp("r", "repeat"),
 		),
+		SeekBackward: key.NewBinding(
+			key.WithKeys("["),
+			key.WithHelp("[", "seek -5s"),
+		),
+		SeekForward: key.NewBinding(
+			key.WithKeys("]"),
+			key.WithHelp("]", "seek +5s"),
+		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),
 			key.WithHelp("?", "help"),
@@ -147,7 +157,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Left, k.Right},
 		{k.Enter, k.Back, k.Search, k.GlobalSearch},
-		{k.PlayPause, k.Next, k.Prev},
+		{k.PlayPause, k.Next, k.Prev, k.SeekBackward, k.SeekForward},
 		{k.VolumeUp, k.VolumeDown, k.Shuffle, k.Repeat},
 		{k.Help, k.Quit, k.Refresh, k.Devices, k.History, k.Artist, k.Like, k.Lyrics, k.AddToPlaylist},
 	}

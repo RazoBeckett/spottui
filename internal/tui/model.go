@@ -521,6 +521,12 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.Repeat):
 		return m, m.cycleRepeat()
 
+	case key.Matches(msg, m.keys.SeekBackward):
+		return m, m.seekBackward()
+
+	case key.Matches(msg, m.keys.SeekForward):
+		return m, m.seekForward()
+
 	case key.Matches(msg, m.keys.Refresh):
 		return m, m.pollPlaybackState()
 

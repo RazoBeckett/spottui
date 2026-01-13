@@ -362,6 +362,43 @@ func (m Model) cycleRepeat() tea.Cmd {
 	}
 }
 
+func (m Model) seekBackward() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		state, err := m.client.PlayerState(ctx)
+		if err != nil || state == nil {
+			return nil
+		}
+
+		newPos := int(state.Progress) - 5000
+		if newPos < 0 {
+			newPos = 0
+		}
+
+		if err := m.client.Seek(ctx, newPos); err != nil {
+			return ErrMsg{Err: err}
+		}
+		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) seekForward() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		state, err := m.client.PlayerState(ctx)
+		if err != nil || state == nil {
+			return nil
+		}
+
+		newPos := int(state.Progress) + 5000
+
+		if err := m.client.Seek(ctx, newPos); err != nil {
+			return ErrMsg{Err: err}
+		}
+		return PollPlaybackMsg{}
+	}
+}
+
 func (m Model) playTrack(track spotify.PlaylistTrack) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
