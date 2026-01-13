@@ -16,6 +16,16 @@ func (m Model) renderLoading() string {
 	)
 }
 
+func (m Model) renderTooSmall() string {
+	msg := m.styles.Error.Render("Terminal too small") + "\n" +
+		m.styles.Muted.Render("Minimum: 60x15")
+	return lipgloss.Place(
+		m.width, m.height,
+		lipgloss.Center, lipgloss.Center,
+		msg,
+	)
+}
+
 func (m Model) renderPlaylists() string {
 	header := m.renderHeader()
 	notification := m.renderNotification()
@@ -28,8 +38,8 @@ func (m Model) renderPlaylists() string {
 	helpHeight := lipgloss.Height(help)
 	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
 
-	if contentHeight < 1 {
-		contentHeight = 1
+	if contentHeight < MinListHeight {
+		contentHeight = MinListHeight
 	}
 
 	content := lipgloss.NewStyle().Height(contentHeight).Render(m.playlists.View())
@@ -55,8 +65,8 @@ func (m Model) renderTracks() string {
 	helpHeight := lipgloss.Height(help)
 	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
 
-	if contentHeight < 1 {
-		contentHeight = 1
+	if contentHeight < MinListHeight {
+		contentHeight = MinListHeight
 	}
 
 	content := lipgloss.NewStyle().Height(contentHeight).Render(m.tracks.View())
@@ -82,8 +92,8 @@ func (m Model) renderAlbum() string {
 	helpHeight := lipgloss.Height(help)
 	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
 
-	if contentHeight < 1 {
-		contentHeight = 1
+	if contentHeight < MinListHeight {
+		contentHeight = MinListHeight
 	}
 
 	content := lipgloss.NewStyle().Height(contentHeight).Render(m.albumTracks.View())
@@ -105,8 +115,8 @@ func (m Model) renderDevices() string {
 	helpHeight := lipgloss.Height(help)
 	contentHeight := m.height - headerHeight - helpHeight
 
-	if contentHeight < 1 {
-		contentHeight = 1
+	if contentHeight < MinListHeight {
+		contentHeight = MinListHeight
 	}
 
 	content := lipgloss.NewStyle().Height(contentHeight).Render(m.devices.View())
@@ -122,7 +132,7 @@ func (m Model) renderSearch() string {
 	header := m.renderHeader()
 
 	inputStyle := m.styles.Header.Copy().Padding(0, 1)
-	searchBox := inputStyle.Render("🔍 " + m.searchInput.View())
+	searchBox := inputStyle.Render("  " + m.searchInput.View())
 
 	notification := m.renderNotification()
 	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
@@ -135,8 +145,8 @@ func (m Model) renderSearch() string {
 	helpHeight := lipgloss.Height(help)
 	contentHeight := m.height - headerHeight - searchBoxHeight - notificationHeight - playerHeight - helpHeight
 
-	if contentHeight < 1 {
-		contentHeight = 1
+	if contentHeight < MinListHeight {
+		contentHeight = MinListHeight
 	}
 
 	var contentView string
@@ -174,8 +184,8 @@ func (m Model) renderHistory() string {
 	helpHeight := lipgloss.Height(help)
 	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
 
-	if contentHeight < 1 {
-		contentHeight = 1
+	if contentHeight < MinListHeight {
+		contentHeight = MinListHeight
 	}
 
 	content := lipgloss.NewStyle().Height(contentHeight).Render(m.historyTracks.View())
@@ -232,8 +242,8 @@ func (m Model) renderArtist() string {
 	helpHeight := lipgloss.Height(help)
 	contentHeight := m.height - headerHeight - artistHeaderHeight - tabsHeight - notificationHeight - playerHeight - helpHeight
 
-	if contentHeight < 1 {
-		contentHeight = 1
+	if contentHeight < MinListHeight {
+		contentHeight = MinListHeight
 	}
 
 	var listView string
@@ -376,8 +386,8 @@ func (m Model) renderLyrics() string {
 	headerHeight := lipgloss.Height(header)
 	lyricsAreaHeight := m.height - headerHeight - playerHeight - helpHeight - 2
 
-	if lyricsAreaHeight < 1 {
-		lyricsAreaHeight = 1
+	if lyricsAreaHeight < MinListHeight {
+		lyricsAreaHeight = MinListHeight
 	}
 
 	if m.lyricsIsSynced && len(m.lyricsSynced) > 0 {
@@ -498,11 +508,11 @@ func (m Model) renderAddToPlaylist() string {
 	helpHeight := lipgloss.Height(help)
 	availableHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight - 2
 
-	if availableHeight < 5 {
-		availableHeight = 5
+	if availableHeight < MinListHeight {
+		availableHeight = MinListHeight
 	}
 
-	m.addToPlaylistList.SetSize(m.width-4, availableHeight)
+	m.addToPlaylistList.SetSize(m.width-HorizontalPad, availableHeight)
 
 	var content strings.Builder
 	content.WriteString(header)

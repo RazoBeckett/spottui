@@ -31,7 +31,14 @@ const (
 	ViewAddToPlaylist
 )
 
-// Model is the root application state
+const (
+	MinWidth      = 60
+	MinHeight     = 15
+	HorizontalPad = 4
+	ListHeightSub = 12
+	MinListHeight = 5
+)
+
 type Model struct {
 	// Core state
 	view     View
@@ -167,17 +174,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		// Update list dimensions
-		listHeight := msg.Height - 12 // Leave room for header, player, help
-		if listHeight < 5 {
-			listHeight = 5
+		listWidth := m.width - HorizontalPad
+		listHeight := m.height - ListHeightSub
+		if listHeight < MinListHeight {
+			listHeight = MinListHeight
 		}
-		if len(m.playlists.Items()) > 0 || m.view == ViewPlaylists {
-			m.playlists.SetSize(msg.Width-4, listHeight)
-		}
-		if len(m.tracks.Items()) > 0 || m.view == ViewTracks {
-			m.tracks.SetSize(msg.Width-4, listHeight)
-		}
+		m.playlists.SetSize(listWidth, listHeight)
+		m.tracks.SetSize(listWidth, listHeight)
+		m.albumTracks.SetSize(listWidth, listHeight)
+		m.artistTopTracks.SetSize(listWidth, listHeight)
+		m.artistAlbums.SetSize(listWidth, listHeight)
+		m.devices.SetSize(listWidth, listHeight)
+		m.searchResults.SetSize(listWidth, listHeight)
+		m.historyTracks.SetSize(listWidth, listHeight)
+		m.addToPlaylistList.SetSize(listWidth, listHeight)
 		return m, nil
 
 	case spinner.TickMsg:
@@ -188,26 +198,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case UserDataMsg:
 		m.currentUser = msg.User
 		m.playlistsData = msg.Playlists
-		listHeight := m.height - 12
-		if listHeight < 5 {
-			listHeight = 5
-		}
-		m.playlists = views.CreatePlaylistList(msg.Playlists, msg.LikedSongsTotal, m.styles, m.width-4, listHeight)
+		m.playlists = views.CreatePlaylistList(msg.Playlists, msg.LikedSongsTotal, m.styles, m.listWidth(), m.listHeight())
 		m.view = ViewPlaylists
 		return m, tea.Batch(m.pollPlaybackState(), m.schedulePlaybackPoll())
 
 	case TracksLoadedMsg:
 		m.fetching = false
 		m.tracksData = msg.Tracks
-		listHeight := m.height - 12
-		if listHeight < 5 {
-			listHeight = 5
-		}
 		currentTrack := ""
 		if m.playbackState != nil && m.playbackState.Item != nil {
 			currentTrack = string(m.playbackState.Item.URI)
 		}
-		m.tracks = views.CreateTrackList(msg.Tracks, m.styles, currentTrack, m.width-4, listHeight)
+		m.tracks = views.CreateTrackList(msg.Tracks, m.styles, currentTrack, m.listWidth(), m.listHeight())
 		if m.selectedPlaylist != nil {
 			m.tracks.Title = m.selectedPlaylist.Name
 		} else {
@@ -219,15 +221,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case AlbumTracksLoadedMsg:
 		m.fetching = false
 		m.albumTracksData = msg.Tracks
-		listHeight := m.height - 12
-		if listHeight < 5 {
-			listHeight = 5
-		}
 		currentTrack := ""
 		if m.playbackState != nil && m.playbackState.Item != nil {
 			currentTrack = string(m.playbackState.Item.URI)
 		}
-		m.albumTracks = views.CreateAlbumTrackList(msg.Tracks, m.styles, currentTrack, m.width-4, listHeight)
+		m.albumTracks = views.CreateAlbumTrackList(msg.Tracks, m.styles, currentTrack, m.listWidth(), m.listHeight())
 		if m.selectedAlbum != nil {
 			m.albumTracks.Title = m.selectedAlbum.Name
 		}
@@ -279,11 +277,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case DevicesLoadedMsg:
 		m.fetching = false
 		m.devicesData = msg.Devices
-		listHeight := m.height - 12
-		if listHeight < 5 {
-			listHeight = 5
-		}
-		m.devices = views.CreateDeviceList(msg.Devices, m.styles, m.width-4, listHeight)
+		m.devices = views.CreateDeviceList(msg.Devices, m.styles, m.listWidth(), m.listHeight())
 		m.view = ViewDevices
 		return m, nil
 
@@ -294,29 +288,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searchAlbumsData = msg.Albums
 		m.searchPlaylistsData = msg.Playlists
 		m.searchArtistsData = msg.Artists
-		listHeight := m.height - 14
-		if listHeight < 5 {
-			listHeight = 5
-		}
 		currentTrack := ""
 		if m.playbackState != nil && m.playbackState.Item != nil {
 			currentTrack = string(m.playbackState.Item.URI)
 		}
-		m.searchResults = views.CreateSearchResultsList(msg.Tracks, msg.Albums, msg.Playlists, msg.Artists, m.styles, currentTrack, m.width-4, listHeight)
+		m.searchResults = views.CreateSearchResultsList(msg.Tracks, msg.Albums, msg.Playlists, msg.Artists, m.styles, currentTrack, m.listWidth(), m.listHeight())
 		return m, nil
 
 	case HistoryLoadedMsg:
 		m.fetching = false
 		m.historyData = msg.Items
-		listHeight := m.height - 12
-		if listHeight < 5 {
-			listHeight = 5
-		}
 		currentTrack := ""
 		if m.playbackState != nil && m.playbackState.Item != nil {
 			currentTrack = string(m.playbackState.Item.URI)
 		}
-		m.historyTracks = views.CreateHistoryList(msg.Items, m.styles, currentTrack, m.width-4, listHeight)
+		m.historyTracks = views.CreateHistoryList(msg.Items, m.styles, currentTrack, m.listWidth(), m.listHeight())
 		m.view = ViewHistory
 		return m, nil
 
@@ -326,16 +312,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.artistTopTracksData = msg.TopTracks
 		m.artistAlbumsData = msg.Albums
 		m.artistViewMode = "tracks"
-		listHeight := m.height - 14
-		if listHeight < 5 {
-			listHeight = 5
-		}
 		currentTrack := ""
 		if m.playbackState != nil && m.playbackState.Item != nil {
 			currentTrack = string(m.playbackState.Item.URI)
 		}
-		m.artistTopTracks = views.CreateArtistTopTracksList(msg.TopTracks, m.styles, currentTrack, m.width-4, listHeight)
-		m.artistAlbums = views.CreateArtistAlbumsList(msg.Albums, m.styles, m.width-4, listHeight)
+		m.artistTopTracks = views.CreateArtistTopTracksList(msg.TopTracks, m.styles, currentTrack, m.listWidth(), m.listHeight())
+		m.artistAlbums = views.CreateArtistAlbumsList(msg.Albums, m.styles, m.listWidth(), m.listHeight())
 		m.view = ViewArtist
 		return m, nil
 
@@ -417,6 +399,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View renders the UI
 func (m Model) View() string {
+	if m.width < MinWidth || m.height < MinHeight {
+		return m.renderTooSmall()
+	}
+
 	switch m.view {
 	case ViewLoading:
 		return m.renderLoading()
@@ -443,4 +429,16 @@ func (m Model) View() string {
 	default:
 		return "Unknown view"
 	}
+}
+
+func (m Model) listHeight() int {
+	h := m.height - ListHeightSub
+	if h < MinListHeight {
+		return MinListHeight
+	}
+	return h
+}
+
+func (m Model) listWidth() int {
+	return m.width - HorizontalPad
 }
