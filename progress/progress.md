@@ -1,5 +1,20 @@
 # SpotTUI Progress Tracker
 
+## Recently Completed (Jan 14, 2026)
+
+- [x] **ASCII art logo in header** - @razobeckett
+  - Replaced "♫ SpotTUI" text with compact Unicode box-drawing ASCII logo
+  - 3-line tall, 21-char wide logo using ┏━┓ style characters
+  - Added top padding via leading newline in logo constant
+  - Files: `internal/tui/render.go`
+  - Commit: `95b5cd9`
+
+- [x] **Progress tracking guidelines in AGENTS.md** - @razobeckett
+  - Added rule to always update `progress/` directory
+  - Documented all 5 progress files and their purposes
+  - Included format guidelines for entries
+  - Commit: `13e8cd1`
+
 ## Recently Completed (Jan 13, 2026)
 
 - [x] **Responsive layout improvements** - @razobeckett
