@@ -160,6 +160,8 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 - Do not capitalize first letter of description
 - No period at end of description
 - Breaking changes: add `!` before `:` (e.g., `feat!: remove endpoint`)
+- **Always run `git status` before any git operations**
+- **Never delete files without explicit permission**
 
 ### Examples
 
