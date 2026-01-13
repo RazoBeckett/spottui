@@ -22,16 +22,17 @@ type KeyMap struct {
 	Repeat     key.Binding
 
 	// App
-	Help         key.Binding
-	Quit         key.Binding
-	Search       key.Binding
-	GlobalSearch key.Binding
-	Refresh      key.Binding
-	Devices      key.Binding
-	History      key.Binding
-	Artist       key.Binding
-	Like         key.Binding
-	Lyrics       key.Binding
+	Help          key.Binding
+	Quit          key.Binding
+	Search        key.Binding
+	GlobalSearch  key.Binding
+	Refresh       key.Binding
+	Devices       key.Binding
+	History       key.Binding
+	Artist        key.Binding
+	Like          key.Binding
+	Lyrics        key.Binding
+	AddToPlaylist key.Binding
 }
 
 // DefaultKeyMap returns the default keybindings
@@ -118,8 +119,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("H", "recently played"),
 		),
 		Artist: key.NewBinding(
-			key.WithKeys("a"),
-			key.WithHelp("a", "view artist"),
+			key.WithKeys("A"),
+			key.WithHelp("A", "view artist"),
 		),
 		Like: key.NewBinding(
 			key.WithKeys("l"),
@@ -128,6 +129,10 @@ func DefaultKeyMap() KeyMap {
 		Lyrics: key.NewBinding(
 			key.WithKeys("L"),
 			key.WithHelp("L", "lyrics"),
+		),
+		AddToPlaylist: key.NewBinding(
+			key.WithKeys("a"),
+			key.WithHelp("a", "add to playlist"),
 		),
 	}
 }
@@ -144,6 +149,6 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Enter, k.Back, k.Search, k.GlobalSearch},
 		{k.PlayPause, k.Next, k.Prev},
 		{k.VolumeUp, k.VolumeDown, k.Shuffle, k.Repeat},
-		{k.Help, k.Quit, k.Refresh, k.Devices, k.History, k.Artist, k.Like, k.Lyrics},
+		{k.Help, k.Quit, k.Refresh, k.Devices, k.History, k.Artist, k.Like, k.Lyrics, k.AddToPlaylist},
 	}
 }

@@ -67,6 +67,11 @@ type VolumeChangedMsg struct {
 	Volume int
 }
 
+type TrackAddedToPlaylistMsg struct {
+	PlaylistName string
+	TrackName    string
+}
+
 func (m Model) scheduleErrorDismiss() tea.Cmd {
 	return tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
 		return DismissErrorMsg{}
@@ -355,15 +360,19 @@ func (m Model) playTrack(track spotify.PlaylistTrack) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
 
-		if m.selectedPlaylist == nil {
-			return nil
-		}
+		var opts *spotify.PlayOptions
 
-		opts := &spotify.PlayOptions{
-			PlaybackContext: &m.selectedPlaylist.URI,
-			PlaybackOffset: &spotify.PlaybackOffset{
-				URI: track.Track.URI,
-			},
+		if m.selectedPlaylist != nil {
+			opts = &spotify.PlayOptions{
+				PlaybackContext: &m.selectedPlaylist.URI,
+				PlaybackOffset: &spotify.PlaybackOffset{
+					URI: track.Track.URI,
+				},
+			}
+		} else {
+			opts = &spotify.PlayOptions{
+				URIs: []spotify.URI{track.Track.URI},
+			}
 		}
 
 		if err := m.client.PlayOpt(ctx, opts); err != nil {
@@ -788,6 +797,23 @@ func (m Model) toggleLikeTrack(trackID spotify.ID, trackName string) tea.Cmd {
 			TrackID:   trackID,
 			IsLiked:   !isCurrentlyLiked,
 			TrackName: trackName,
+		}
+	}
+}
+
+func (m Model) addTrackToPlaylist(playlistID spotify.ID, playlistName string, trackID spotify.ID, trackName string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
+
+		_, err := m.client.AddTracksToPlaylist(ctx, playlistID, trackID)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		return TrackAddedToPlaylistMsg{
+			PlaylistName: playlistName,
+			TrackName:    trackName,
 		}
 	}
 }

@@ -160,7 +160,25 @@ func CreatePlaylistList(playlists []spotify.SimplePlaylist, likedSongsTotal int,
 	return l
 }
 
-// CreateTrackList creates a new list model for tracks
+func CreateAddToPlaylistList(playlists []spotify.SimplePlaylist, s styles.Styles, width, height int) list.Model {
+	items := make([]list.Item, 0, len(playlists))
+
+	for _, p := range playlists {
+		items = append(items, PlaylistItem{Playlist: p})
+	}
+
+	delegate := PlaylistDelegate{Styles: s}
+
+	l := list.New(items, delegate, width, height)
+	l.Title = "Add to Playlist"
+	l.SetShowStatusBar(true)
+	l.SetFilteringEnabled(true)
+	l.Styles.Title = s.ListTitle
+	l.SetShowHelp(false)
+
+	return l
+}
+
 func CreateTrackList(tracks []spotify.PlaylistTrack, s styles.Styles, currentTrackURI string, width, height int) list.Model {
 	items := make([]list.Item, len(tracks))
 	for i, t := range tracks {

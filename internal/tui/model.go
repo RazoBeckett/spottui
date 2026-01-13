@@ -30,6 +30,7 @@ const (
 	ViewHistory
 	ViewHelp
 	ViewLyrics
+	ViewAddToPlaylist
 )
 
 // Model is the root application state
@@ -86,6 +87,9 @@ type Model struct {
 	lyricsArtistName    string
 	lyricsScrollOffset  int
 	fetchingLyrics      bool
+
+	addToPlaylistTrack spotify.ID
+	addToPlaylistList  list.Model
 
 	// Styling and keybindings
 	styles styles.Styles
@@ -322,6 +326,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.showNotify = false
 		m.notifyMsg = ""
 		return m, nil
+
+	case TrackAddedToPlaylistMsg:
+		m.notifyMsg = "Added to " + msg.PlaylistName
+		m.showNotify = true
+		return m, m.scheduleNotifyDismiss()
 	}
 
 	// Delegate to active view's sub-model
@@ -363,6 +372,8 @@ func (m Model) View() string {
 		return m.renderHelp()
 	case ViewLyrics:
 		return m.renderLyrics()
+	case ViewAddToPlaylist:
+		return m.renderAddToPlaylist()
 	default:
 		return "Unknown view"
 	}
@@ -487,6 +498,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case ViewLyrics:
 		return m.handleLyricsKeys(msg)
+
+	case ViewAddToPlaylist:
+		return m.handleAddToPlaylistKeys(msg)
 	}
 
 	return m, nil
@@ -531,6 +545,20 @@ func (m Model) handleTrackKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if key.Matches(msg, m.keys.AddToPlaylist) {
+		if item, ok := m.tracks.SelectedItem().(views.TrackItem); ok {
+			m.addToPlaylistTrack = item.Track.Track.ID
+			listHeight := m.height - 12
+			if listHeight < 5 {
+				listHeight = 5
+			}
+			m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.width-4, listHeight)
+			m.prevView = m.view
+			m.view = ViewAddToPlaylist
+			return m, nil
+		}
+	}
+
 	var cmd tea.Cmd
 	m.tracks, cmd = m.tracks.Update(msg)
 	return m, cmd
@@ -555,6 +583,20 @@ func (m Model) handleAlbumKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Like) {
 		if item, ok := m.albumTracks.SelectedItem().(views.AlbumTrackItem); ok {
 			return m, m.toggleLikeTrack(item.Track.ID, item.Track.Name)
+		}
+	}
+
+	if key.Matches(msg, m.keys.AddToPlaylist) {
+		if item, ok := m.albumTracks.SelectedItem().(views.AlbumTrackItem); ok {
+			m.addToPlaylistTrack = item.Track.ID
+			listHeight := m.height - 12
+			if listHeight < 5 {
+				listHeight = 5
+			}
+			m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.width-4, listHeight)
+			m.prevView = m.view
+			m.view = ViewAddToPlaylist
+			return m, nil
 		}
 	}
 
@@ -648,6 +690,24 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if key.Matches(msg, m.keys.AddToPlaylist) {
+		if m.hasSearchResults() {
+			if item, ok := m.searchResults.SelectedItem().(views.SearchItem); ok {
+				if item.Type == views.SearchResultTrack && item.Track != nil {
+					m.addToPlaylistTrack = item.Track.ID
+					listHeight := m.height - 12
+					if listHeight < 5 {
+						listHeight = 5
+					}
+					m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.width-4, listHeight)
+					m.prevView = m.view
+					m.view = ViewAddToPlaylist
+					return m, nil
+				}
+			}
+		}
+	}
+
 	switch msg.String() {
 	case "/", "i":
 		m.searchInput.Focus()
@@ -691,6 +751,20 @@ func (m Model) handleHistoryKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Like) {
 		if item, ok := m.historyTracks.SelectedItem().(views.AlbumTrackItem); ok {
 			return m, m.toggleLikeTrack(item.Track.ID, item.Track.Name)
+		}
+	}
+
+	if key.Matches(msg, m.keys.AddToPlaylist) {
+		if item, ok := m.historyTracks.SelectedItem().(views.AlbumTrackItem); ok {
+			m.addToPlaylistTrack = item.Track.ID
+			listHeight := m.height - 12
+			if listHeight < 5 {
+				listHeight = 5
+			}
+			m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.width-4, listHeight)
+			m.prevView = m.view
+			m.view = ViewAddToPlaylist
+			return m, nil
 		}
 	}
 
@@ -759,6 +833,22 @@ func (m Model) handleArtistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if key.Matches(msg, m.keys.AddToPlaylist) {
+		if m.artistViewMode == "tracks" {
+			if item, ok := m.artistTopTracks.SelectedItem().(views.ArtistTopTrackItem); ok {
+				m.addToPlaylistTrack = item.Track.ID
+				listHeight := m.height - 12
+				if listHeight < 5 {
+					listHeight = 5
+				}
+				m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.width-4, listHeight)
+				m.prevView = m.view
+				m.view = ViewAddToPlaylist
+				return m, nil
+			}
+		}
+	}
+
 	if m.artistViewMode == "tracks" {
 		var cmd tea.Cmd
 		m.artistTopTracks, cmd = m.artistTopTracks.Update(msg)
@@ -767,6 +857,24 @@ func (m Model) handleArtistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.artistAlbums, cmd = m.artistAlbums.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleAddToPlaylistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if key.Matches(msg, m.keys.Back) {
+		m.view = m.prevView
+		return m, nil
+	}
+
+	if key.Matches(msg, m.keys.Enter) {
+		if item, ok := m.addToPlaylistList.SelectedItem().(views.PlaylistItem); ok {
+			m.view = m.prevView
+			return m, m.addTrackToPlaylist(item.Playlist.ID, item.Playlist.Name, m.addToPlaylistTrack, "")
+		}
+	}
+
+	var cmd tea.Cmd
+	m.addToPlaylistList, cmd = m.addToPlaylistList.Update(msg)
 	return m, cmd
 }
 
@@ -1156,6 +1264,45 @@ func (m Model) renderLyrics() string {
 		header,
 		"",
 		lyricsBox,
+		player,
+		help,
+	)
+}
+
+func (m Model) renderAddToPlaylist() string {
+	header := m.styles.Header.Render("Add to Playlist")
+	notification := m.renderNotification()
+	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	help := m.renderHelpBar()
+
+	headerHeight := lipgloss.Height(header)
+	notificationHeight := lipgloss.Height(notification)
+	playerHeight := lipgloss.Height(player)
+	helpHeight := lipgloss.Height(help)
+	availableHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight - 2
+
+	if availableHeight < 5 {
+		availableHeight = 5
+	}
+
+	m.addToPlaylistList.SetSize(m.width-4, availableHeight)
+
+	var content strings.Builder
+	content.WriteString(header)
+	content.WriteString("\n")
+	content.WriteString(m.addToPlaylistList.View())
+
+	if notification != "" {
+		return lipgloss.JoinVertical(lipgloss.Left,
+			content.String(),
+			notification,
+			player,
+			help,
+		)
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		content.String(),
 		player,
 		help,
 	)
