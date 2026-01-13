@@ -480,6 +480,24 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.view = m.prevView
 			return m, nil
 		}
+		if m.view == ViewDevices {
+			m.view = m.prevView
+			return m, nil
+		}
+		if m.view == ViewSearch {
+			if !m.searchInput.Focused() {
+				m.view = m.prevView
+				return m, nil
+			}
+		}
+		if m.view == ViewHistory {
+			m.view = m.prevView
+			return m, nil
+		}
+		if m.view == ViewAddToPlaylist {
+			m.view = m.prevView
+			return m, nil
+		}
 
 	// Playback controls (global)
 	case key.Matches(msg, m.keys.PlayPause):
@@ -675,11 +693,6 @@ func (m Model) handleDeviceKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if key.Matches(msg, m.keys.Back) {
-		m.view = m.prevView
-		return m, nil
-	}
-
 	var cmd tea.Cmd
 	m.devices, cmd = m.devices.Update(msg)
 	return m, cmd
@@ -702,11 +715,6 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.searchInput, cmd = m.searchInput.Update(msg)
 		return m, cmd
-	}
-
-	if key.Matches(msg, m.keys.Back) {
-		m.view = m.prevView
-		return m, nil
 	}
 
 	if key.Matches(msg, m.keys.Enter) {
@@ -796,11 +804,6 @@ func (m Model) handleHistoryKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if key.Matches(msg, m.keys.Back) {
-		m.view = m.prevView
-		return m, nil
-	}
-
 	if key.Matches(msg, m.keys.Artist) {
 		if item, ok := m.historyTracks.SelectedItem().(views.AlbumTrackItem); ok {
 			if len(item.Track.Artists) > 0 {
@@ -836,11 +839,6 @@ func (m Model) handleHistoryKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleLyricsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if key.Matches(msg, m.keys.Back) {
-		m.view = m.prevView
-		return m, nil
-	}
-
 	lines := strings.Split(m.lyricsData, "\n")
 	visibleHeight := m.height - 6
 
@@ -923,11 +921,6 @@ func (m Model) handleArtistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleAddToPlaylistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if key.Matches(msg, m.keys.Back) {
-		m.view = m.prevView
-		return m, nil
-	}
-
 	if key.Matches(msg, m.keys.Enter) {
 		if item, ok := m.addToPlaylistList.SelectedItem().(views.PlaylistItem); ok {
 			m.view = m.prevView
