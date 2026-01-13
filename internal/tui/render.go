@@ -69,7 +69,14 @@ func (m Model) renderTracks() string {
 		contentHeight = MinListHeight
 	}
 
-	content := lipgloss.NewStyle().Height(contentHeight).Render(m.tracks.View())
+	var contentView string
+	if m.fetching && len(m.tracks.Items()) == 0 {
+		skeletonCount := contentHeight / 2
+		contentView = m.renderSkeleton(skeletonCount, m.listWidth())
+	} else {
+		contentView = m.tracks.View()
+	}
+	content := lipgloss.NewStyle().Height(contentHeight).Render(contentView)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
@@ -96,7 +103,14 @@ func (m Model) renderAlbum() string {
 		contentHeight = MinListHeight
 	}
 
-	content := lipgloss.NewStyle().Height(contentHeight).Render(m.albumTracks.View())
+	var contentView string
+	if m.fetching && len(m.albumTracks.Items()) == 0 {
+		skeletonCount := contentHeight / 2
+		contentView = m.renderSkeleton(skeletonCount, m.listWidth())
+	} else {
+		contentView = m.albumTracks.View()
+	}
+	content := lipgloss.NewStyle().Height(contentHeight).Render(contentView)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
@@ -119,7 +133,14 @@ func (m Model) renderDevices() string {
 		contentHeight = MinListHeight
 	}
 
-	content := lipgloss.NewStyle().Height(contentHeight).Render(m.devices.View())
+	var contentView string
+	if m.fetching && len(m.devices.Items()) == 0 {
+		skeletonCount := contentHeight / 2
+		contentView = m.renderSkeleton(skeletonCount, m.listWidth())
+	} else {
+		contentView = m.devices.View()
+	}
+	content := lipgloss.NewStyle().Height(contentHeight).Render(contentView)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
@@ -153,7 +174,8 @@ func (m Model) renderSearch() string {
 	if m.hasSearchResults() {
 		contentView = m.searchResults.View()
 	} else if m.searching {
-		contentView = m.styles.Muted.Render("\n  Searching...")
+		skeletonCount := contentHeight / 2
+		contentView = m.renderSkeleton(skeletonCount, m.listWidth())
 	} else if m.searchInput.Value() != "" && !m.searchInput.Focused() {
 		contentView = m.styles.Muted.Render("\n  No results found")
 	} else {
@@ -188,7 +210,14 @@ func (m Model) renderHistory() string {
 		contentHeight = MinListHeight
 	}
 
-	content := lipgloss.NewStyle().Height(contentHeight).Render(m.historyTracks.View())
+	var contentView string
+	if m.fetching && len(m.historyTracks.Items()) == 0 {
+		skeletonCount := contentHeight / 2
+		contentView = m.renderSkeleton(skeletonCount, m.listWidth())
+	} else {
+		contentView = m.historyTracks.View()
+	}
+	content := lipgloss.NewStyle().Height(contentHeight).Render(contentView)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
@@ -247,7 +276,10 @@ func (m Model) renderArtist() string {
 	}
 
 	var listView string
-	if m.artistViewMode == "tracks" {
+	if m.fetching && len(m.artistTopTracks.Items()) == 0 && len(m.artistAlbums.Items()) == 0 {
+		skeletonCount := contentHeight / 2
+		listView = m.renderSkeleton(skeletonCount, m.listWidth())
+	} else if m.artistViewMode == "tracks" {
 		listView = m.artistTopTracks.View()
 	} else {
 		listView = m.artistAlbums.View()
@@ -287,6 +319,24 @@ func (m Model) renderHelpBar() string {
 	return m.styles.HelpBar.Render(
 		"↑/↓ navigate • enter select • esc back • space play/pause • ? help",
 	)
+}
+
+func (m Model) renderSkeleton(count, width int) string {
+	var lines []string
+	for i := 0; i < count; i++ {
+		titleWidth := width / 3
+		descWidth := width / 4
+		if titleWidth > 30 {
+			titleWidth = 30
+		}
+		if descWidth > 20 {
+			descWidth = 20
+		}
+		title := m.styles.Muted.Render("  " + strings.Repeat("░", titleWidth))
+		desc := m.styles.Muted.Render("  " + strings.Repeat("░", descWidth))
+		lines = append(lines, title, desc)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (m Model) renderNotification() string {
