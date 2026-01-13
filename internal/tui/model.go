@@ -1248,44 +1248,55 @@ func (m Model) renderNotification() string {
 }
 
 func (m Model) renderHelp() string {
-	help := `
-╭─────────────────────────────────────╮
-│           SpotTUI Help              │
-├─────────────────────────────────────┤
-│  Navigation                         │
-│  ↑/k      Move up                   │
-│  ↓/j      Move down                 │
-│  enter    Select item               │
-│  esc      Go back                   │
-│  /        Filter list               │
-│  S        Global search             │
-│  a        View artist               │
-│                                     │
-│  Playback                           │
-│  space    Play/Pause                │
-│  n/>      Next track                │
-│  p/<      Previous track            │
-│  +/=      Volume up                 │
-│  -        Volume down               │
-│  s        Toggle shuffle            │
-│  r        Cycle repeat mode         │
-│  l        Like/unlike track         │
-│  L        Show lyrics               │
-│                                     │
-│  General                            │
-│  H        Recently played           │
-│  d        Device selector           │
-│  ?        Toggle help               │
-│  ctrl+r   Refresh                   │
-│  q        Quit                      │
-╰─────────────────────────────────────╯
+	title := m.styles.DialogTitle.Render("SpotTUI Help")
 
-Press ? or esc to close this help screen.
-`
+	navSection := m.styles.ListItemActive.Render("Navigation") + "\n" +
+		"  ↑/k       Move up\n" +
+		"  ↓/j       Move down\n" +
+		"  enter     Select item\n" +
+		"  esc       Go back\n" +
+		"  /         Filter list\n" +
+		"  S         Global search\n" +
+		"  A         View artist"
+
+	playbackSection := m.styles.ListItemActive.Render("Playback") + "\n" +
+		"  space     Play/Pause\n" +
+		"  n/>       Next track\n" +
+		"  p/<       Previous track\n" +
+		"  [/]       Seek -/+5s\n" +
+		"  +/=       Volume up\n" +
+		"  -         Volume down\n" +
+		"  s         Toggle shuffle\n" +
+		"  r         Cycle repeat mode\n" +
+		"  l         Like/unlike track\n" +
+		"  L         Show lyrics\n" +
+		"  a         Add to playlist"
+
+	generalSection := m.styles.ListItemActive.Render("General") + "\n" +
+		"  H         Recently played\n" +
+		"  d         Device selector\n" +
+		"  ?         Toggle help\n" +
+		"  ctrl+r    Refresh\n" +
+		"  q         Quit"
+
+	content := lipgloss.JoinVertical(lipgloss.Left,
+		title,
+		"",
+		navSection,
+		"",
+		playbackSection,
+		"",
+		generalSection,
+	)
+
+	footer := m.styles.Muted.Render("Press ? or esc to close")
+
+	dialog := m.styles.Dialog.Render(content)
+
 	return lipgloss.Place(
 		m.width, m.height,
 		lipgloss.Center, lipgloss.Center,
-		m.styles.Dialog.Render(help),
+		lipgloss.JoinVertical(lipgloss.Center, dialog, "", footer),
 	)
 }
 
