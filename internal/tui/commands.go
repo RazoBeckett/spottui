@@ -362,37 +362,16 @@ func (m Model) cycleRepeat() tea.Cmd {
 	}
 }
 
-func (m Model) seekBackward() tea.Cmd {
-	return func() tea.Msg {
-		ctx := context.Background()
-		state, err := m.client.PlayerState(ctx)
-		if err != nil || state == nil {
-			return nil
-		}
-
-		newPos := int(state.Progress) - 5000
-		if newPos < 0 {
-			newPos = 0
-		}
-
-		if err := m.client.Seek(ctx, newPos); err != nil {
-			return ErrMsg{Err: err}
-		}
-		return PollPlaybackMsg{}
-	}
+func (m Model) scheduleSeekTick() tea.Cmd {
+	return tea.Tick(300*time.Millisecond, func(t time.Time) tea.Msg {
+		return SeekTickMsg{}
+	})
 }
 
-func (m Model) seekForward() tea.Cmd {
+func (m Model) executeSeek(position int) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		state, err := m.client.PlayerState(ctx)
-		if err != nil || state == nil {
-			return nil
-		}
-
-		newPos := int(state.Progress) + 5000
-
-		if err := m.client.Seek(ctx, newPos); err != nil {
+		if err := m.client.Seek(ctx, position); err != nil {
 			return ErrMsg{Err: err}
 		}
 		return PollPlaybackMsg{}

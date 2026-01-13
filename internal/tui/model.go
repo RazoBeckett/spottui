@@ -97,6 +97,10 @@ type Model struct {
 	lastProgressAt time.Time
 	isPlaying      bool
 
+	pendingSeek     int
+	seekPending     bool
+	lastSeekRequest time.Time
+
 	addToPlaylistTrack spotify.ID
 	addToPlaylistList  list.Model
 
@@ -106,6 +110,7 @@ type Model struct {
 }
 
 type ProgressTickMsg struct{}
+type SeekTickMsg struct{}
 
 type SyncedLyricLine struct {
 	TimeMs int
@@ -274,6 +279,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastProgressAt = time.Now()
 		}
 		return m, m.scheduleProgressTick()
+
+	case SeekTickMsg:
+		if m.seekPending && time.Since(m.lastSeekRequest) >= 250*time.Millisecond {
+			m.seekPending = false
+			return m, m.executeSeek(m.pendingSeek)
+		}
+		if m.seekPending {
+			return m, m.scheduleSeekTick()
+		}
+		return m, nil
 
 	case PollPlaybackMsg:
 		return m, tea.Batch(m.pollPlaybackState(), m.schedulePlaybackPoll())
@@ -522,10 +537,27 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.cycleRepeat()
 
 	case key.Matches(msg, m.keys.SeekBackward):
-		return m, m.seekBackward()
+		if !m.seekPending {
+			m.pendingSeek = m.localProgress
+		}
+		m.pendingSeek -= 5000
+		if m.pendingSeek < 0 {
+			m.pendingSeek = 0
+		}
+		m.localProgress = m.pendingSeek
+		m.seekPending = true
+		m.lastSeekRequest = time.Now()
+		return m, m.scheduleSeekTick()
 
 	case key.Matches(msg, m.keys.SeekForward):
-		return m, m.seekForward()
+		if !m.seekPending {
+			m.pendingSeek = m.localProgress
+		}
+		m.pendingSeek += 5000
+		m.localProgress = m.pendingSeek
+		m.seekPending = true
+		m.lastSeekRequest = time.Now()
+		return m, m.scheduleSeekTick()
 
 	case key.Matches(msg, m.keys.Refresh):
 		return m, m.pollPlaybackState()
