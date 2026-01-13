@@ -2,7 +2,10 @@ package tui
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -44,6 +47,12 @@ type HistoryLoadedMsg struct {
 	Items []spotify.RecentlyPlayedItem
 }
 
+type ArtistLoadedMsg struct {
+	Artist    *spotify.FullArtist
+	TopTracks []spotify.FullTrack
+	Albums    []spotify.SimpleAlbum
+}
+
 // ErrMsg contains an error from async operations
 type ErrMsg struct {
 	Err error
@@ -51,15 +60,21 @@ type ErrMsg struct {
 
 type DismissErrorMsg struct{}
 
+type DismissNotifyMsg struct{}
+
 type VolumeChangedMsg struct {
 	Volume int
 }
 
-// Commands (functions that return tea.Cmd)
-
 func (m Model) scheduleErrorDismiss() tea.Cmd {
 	return tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
 		return DismissErrorMsg{}
+	})
+}
+
+func (m Model) scheduleNotifyDismiss() tea.Cmd {
+	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+		return DismissNotifyMsg{}
 	})
 }
 
@@ -378,6 +393,7 @@ type SearchResultsMsg struct {
 	Tracks    []spotify.FullTrack
 	Albums    []spotify.SimpleAlbum
 	Playlists []spotify.SimplePlaylist
+	Artists   []spotify.FullArtist
 }
 
 func (m Model) searchTracks(query string) tea.Cmd {
@@ -385,7 +401,7 @@ func (m Model) searchTracks(query string) tea.Cmd {
 		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
 		defer cancel()
 
-		searchTypes := spotify.SearchTypeTrack | spotify.SearchTypeAlbum | spotify.SearchTypePlaylist
+		searchTypes := spotify.SearchTypeTrack | spotify.SearchTypeAlbum | spotify.SearchTypePlaylist | spotify.SearchTypeArtist
 		result, err := m.client.Search(ctx, query, searchTypes, spotify.Limit(20))
 		if err != nil {
 			return ErrMsg{Err: err}
@@ -400,6 +416,9 @@ func (m Model) searchTracks(query string) tea.Cmd {
 		}
 		if result.Playlists != nil {
 			msg.Playlists = result.Playlists.Playlists
+		}
+		if result.Artists != nil {
+			msg.Artists = result.Artists.Artists
 		}
 
 		return msg
@@ -560,5 +579,177 @@ func (m Model) playHistoryTrack(track spotify.SimpleTrack) tea.Cmd {
 
 		time.Sleep(200 * time.Millisecond)
 		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) fetchArtist(artistID spotify.ID) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
+		defer cancel()
+
+		artist, err := m.client.GetArtist(ctx, artistID)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		topTracks, err := m.client.GetArtistsTopTracks(ctx, artistID, "US")
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		var allAlbums []spotify.SimpleAlbum
+		limit := 50
+		offset := 0
+
+		for {
+			albums, err := m.client.GetArtistAlbums(ctx, artistID,
+				[]spotify.AlbumType{spotify.AlbumTypeAlbum, spotify.AlbumTypeSingle},
+				spotify.Limit(limit), spotify.Offset(offset))
+			if err != nil {
+				return ErrMsg{Err: err}
+			}
+
+			allAlbums = append(allAlbums, albums.Albums...)
+
+			if len(albums.Albums) < limit {
+				break
+			}
+			offset += limit
+		}
+
+		return ArtistLoadedMsg{
+			Artist:    artist,
+			TopTracks: topTracks,
+			Albums:    allAlbums,
+		}
+	}
+}
+
+func (m Model) playArtistTopTrack(track spotify.FullTrack) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+
+		devices, err := m.client.PlayerDevices(ctx)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		var activeDeviceID *spotify.ID
+		for _, d := range devices {
+			if d.Active {
+				activeDeviceID = &d.ID
+				break
+			}
+		}
+
+		if activeDeviceID == nil && len(devices) > 0 {
+			activeDeviceID = &devices[0].ID
+			if err := m.client.TransferPlayback(ctx, *activeDeviceID, false); err != nil {
+				return ErrMsg{Err: err}
+			}
+			time.Sleep(300 * time.Millisecond)
+		}
+
+		if activeDeviceID == nil {
+			return ErrMsg{Err: fmt.Errorf("no Spotify devices available - open Spotify on a device first")}
+		}
+
+		opts := &spotify.PlayOptions{
+			URIs:     []spotify.URI{track.URI},
+			DeviceID: activeDeviceID,
+		}
+
+		if err := m.client.PlayOpt(ctx, opts); err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		time.Sleep(200 * time.Millisecond)
+		return PollPlaybackMsg{}
+	}
+}
+
+type LyricsLoadedMsg struct {
+	Lyrics     string
+	TrackName  string
+	ArtistName string
+}
+
+func (m Model) fetchLyrics(trackName, artistName string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		apiURL := fmt.Sprintf("https://lrclib.net/api/get?track_name=%s&artist_name=%s",
+			url.QueryEscape(trackName),
+			url.QueryEscape(artistName),
+		)
+
+		req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
+		if err != nil {
+			return LyricsLoadedMsg{Lyrics: "", TrackName: trackName, ArtistName: artistName}
+		}
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return LyricsLoadedMsg{Lyrics: "", TrackName: trackName, ArtistName: artistName}
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != 200 {
+			return LyricsLoadedMsg{Lyrics: "", TrackName: trackName, ArtistName: artistName}
+		}
+
+		var result struct {
+			PlainLyrics string `json:"plainLyrics"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			return LyricsLoadedMsg{Lyrics: "", TrackName: trackName, ArtistName: artistName}
+		}
+
+		return LyricsLoadedMsg{
+			Lyrics:     result.PlainLyrics,
+			TrackName:  trackName,
+			ArtistName: artistName,
+		}
+	}
+}
+
+type LikeToggledMsg struct {
+	TrackID   spotify.ID
+	IsLiked   bool
+	TrackName string
+}
+
+func (m Model) toggleLikeTrack(trackID spotify.ID, trackName string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		saved, err := m.client.UserHasTracks(ctx, trackID)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		if len(saved) == 0 {
+			return ErrMsg{Err: fmt.Errorf("could not check track status")}
+		}
+
+		isCurrentlyLiked := saved[0]
+
+		if isCurrentlyLiked {
+			err = m.client.RemoveTracksFromLibrary(ctx, trackID)
+		} else {
+			err = m.client.AddTracksToLibrary(ctx, trackID)
+		}
+
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		return LikeToggledMsg{
+			TrackID:   trackID,
+			IsLiked:   !isCurrentlyLiked,
+			TrackName: trackName,
+		}
 	}
 }
