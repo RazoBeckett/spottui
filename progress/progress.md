@@ -2,6 +2,14 @@
 
 ## Recently Completed (Jan 14, 2026)
 
+- [x] **Loading skeletons** - @razobeckett
+  - Added `renderSkeleton()` function using ░ block characters
+  - Skeleton displays placeholder bars mimicking list item structure
+  - Integrated into 6 views: tracks, album, devices, search, history, artist
+  - Shows skeleton when `fetching=true` AND list is empty
+  - Skeleton count adapts to available content height
+  - Files: `internal/tui/render.go`
+
 - [x] **ASCII art logo in header** - @razobeckett
   - Replaced "♫ SpotTUI" text with compact Unicode box-drawing ASCII logo
   - 3-line tall, 21-char wide logo using ┏━┓ style characters
@@ -82,7 +90,7 @@ _None currently_
 ### Polish
 - [x] ~~Responsive layout - Better handling of small terminal sizes~~ (completed Jan 13, 2026)
 - [ ] Error retry logic - Automatic retry with exponential backoff
-- [ ] Loading skeletons - Placeholder UI while content loads
+- [x] ~~Loading skeletons - Placeholder UI while content loads~~ (completed Jan 14, 2026)
 
 ### Tech Debt
 - [ ] Increase test coverage - Target 80%+ coverage
