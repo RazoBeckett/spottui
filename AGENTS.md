@@ -162,6 +162,24 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 - Breaking changes: add `!` before `:` (e.g., `feat!: remove endpoint`)
 - **Always run `git status` before any git operations**
 - **Never delete files without explicit permission**
+- **Always update `progress/` directory** when completing features, fixing bugs, or resolving tech debt (see format below)
+
+### Progress Tracking
+
+When documenting completed work in `progress/` files, include:
+
+- **What was implemented/fixed**
+- **Date completed** (use `Mon DD, YYYY` format)
+- **Who worked on it** (@username)
+- **Technical details** (files changed, approach used)
+- **Metrics or outcomes** (if applicable)
+
+Files to update:
+- `progress/progress.md` — Main progress tracker (completed tasks, in-progress items)
+- `progress/bugs-and-issues.md` — Bug tracking (mark fixed with solution description)
+- `progress/tech-debt.md` — Technical debt (mark resolved or update progress)
+- `progress/temporary-decisions.md` — Resolved technical decisions
+- `progress/deployment-log.md` — Deployment history with version numbers
 
 ### Examples
 
