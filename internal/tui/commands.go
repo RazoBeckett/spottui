@@ -236,6 +236,12 @@ func (m Model) schedulePlaybackPoll() tea.Cmd {
 	})
 }
 
+func (m Model) scheduleProgressTick() tea.Cmd {
+	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
+		return ProgressTickMsg{}
+	})
+}
+
 // Playback control commands
 
 func (m Model) togglePlayback() tea.Cmd {

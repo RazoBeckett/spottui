@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -92,6 +93,10 @@ type Model struct {
 	lyricsScrollOffset  int
 	fetchingLyrics      bool
 
+	localProgress  int
+	lastProgressAt time.Time
+	isPlaying      bool
+
 	addToPlaylistTrack spotify.ID
 	addToPlaylistList  list.Model
 
@@ -99,6 +104,8 @@ type Model struct {
 	styles styles.Styles
 	keys   KeyMap
 }
+
+type ProgressTickMsg struct{}
 
 type SyncedLyricLine struct {
 	TimeMs int
@@ -248,13 +255,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PlaybackStateMsg:
 		m.playbackState = msg.State
-		// Update track list delegate to show currently playing
+		if msg.State != nil {
+			m.localProgress = int(msg.State.Progress)
+			m.lastProgressAt = time.Now()
+			m.isPlaying = msg.State.Playing
+		}
 		if m.view == ViewTracks && m.playbackState != nil && m.playbackState.Item != nil {
 			currentTrack := string(m.playbackState.Item.URI)
 			delegate := views.TrackDelegate{Styles: m.styles, CurrentTrack: currentTrack}
 			m.tracks.SetDelegate(delegate)
 		}
 		return m, nil
+
+	case ProgressTickMsg:
+		if m.isPlaying && m.view == ViewLyrics {
+			elapsed := time.Since(m.lastProgressAt)
+			m.localProgress += int(elapsed.Milliseconds())
+			m.lastProgressAt = time.Now()
+		}
+		return m, m.scheduleProgressTick()
 
 	case PollPlaybackMsg:
 		return m, tea.Batch(m.pollPlaybackState(), m.schedulePlaybackPoll())
@@ -351,6 +370,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		m.view = ViewLyrics
+		if m.lyricsIsSynced {
+			return m, m.scheduleProgressTick()
+		}
 		return m, nil
 
 	case LikeToggledMsg:
@@ -1319,10 +1341,7 @@ func (m Model) renderPlainLyrics(header, player, help string, lyricsAreaHeight i
 }
 
 func (m Model) renderSyncedLyrics(header, player, help string, lyricsAreaHeight int) string {
-	currentTimeMs := 0
-	if m.playbackState != nil {
-		currentTimeMs = int(m.playbackState.Progress)
-	}
+	currentTimeMs := m.localProgress
 
 	currentLineIdx := 0
 	for i, line := range m.lyricsSynced {
