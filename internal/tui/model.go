@@ -281,7 +281,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.scheduleProgressTick()
 
 	case SeekTickMsg:
-		if m.seekPending && time.Since(m.lastSeekRequest) >= 250*time.Millisecond {
+		if m.seekPending && time.Since(m.lastSeekRequest) >= 100*time.Millisecond {
 			m.seekPending = false
 			return m, m.executeSeek(m.pendingSeek)
 		}

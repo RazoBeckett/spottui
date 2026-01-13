@@ -363,7 +363,7 @@ func (m Model) cycleRepeat() tea.Cmd {
 }
 
 func (m Model) scheduleSeekTick() tea.Cmd {
-	return tea.Tick(300*time.Millisecond, func(t time.Time) tea.Msg {
+	return tea.Tick(150*time.Millisecond, func(t time.Time) tea.Msg {
 		return SeekTickMsg{}
 	})
 }
