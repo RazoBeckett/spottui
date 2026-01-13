@@ -129,6 +129,10 @@ func (m Model) fetchInitialData() tea.Cmd {
 
 func (m Model) fetchTracks(playlistID spotify.ID) tea.Cmd {
 	return func() tea.Msg {
+		if cached, ok := m.cache.GetPlaylistTracks(playlistID); ok {
+			return TracksLoadedMsg{Tracks: cached}
+		}
+
 		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
 		defer cancel()
 
@@ -151,6 +155,7 @@ func (m Model) fetchTracks(playlistID spotify.ID) tea.Cmd {
 			offset += limit
 		}
 
+		m.cache.SetPlaylistTracks(playlistID, allTracks)
 		return TracksLoadedMsg{Tracks: allTracks}
 	}
 }
@@ -189,6 +194,10 @@ func (m Model) fetchLikedTracks() tea.Cmd {
 
 func (m Model) fetchAlbumTracks(albumID spotify.ID) tea.Cmd {
 	return func() tea.Msg {
+		if cached, ok := m.cache.GetAlbumTracks(albumID); ok {
+			return AlbumTracksLoadedMsg{Tracks: cached}
+		}
+
 		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
 		defer cancel()
 
@@ -211,6 +220,7 @@ func (m Model) fetchAlbumTracks(albumID spotify.ID) tea.Cmd {
 			offset += limit
 		}
 
+		m.cache.SetAlbumTracks(albumID, allTracks)
 		return AlbumTracksLoadedMsg{Tracks: allTracks}
 	}
 }
@@ -467,6 +477,10 @@ type SearchResultsMsg struct {
 
 func (m Model) searchTracks(query string) tea.Cmd {
 	return func() tea.Msg {
+		if cached, ok := m.cache.GetSearchResults(query); ok {
+			return cached
+		}
+
 		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
 		defer cancel()
 
@@ -490,6 +504,7 @@ func (m Model) searchTracks(query string) tea.Cmd {
 			msg.Artists = result.Artists.Artists
 		}
 
+		m.cache.SetSearchResults(query, msg)
 		return msg
 	}
 }
@@ -653,6 +668,10 @@ func (m Model) playHistoryTrack(track spotify.SimpleTrack) tea.Cmd {
 
 func (m Model) fetchArtist(artistID spotify.ID) tea.Cmd {
 	return func() tea.Msg {
+		if cached, ok := m.cache.GetArtistData(artistID); ok {
+			return cached
+		}
+
 		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
 		defer cancel()
 
@@ -686,11 +705,13 @@ func (m Model) fetchArtist(artistID spotify.ID) tea.Cmd {
 			offset += limit
 		}
 
-		return ArtistLoadedMsg{
+		result := ArtistLoadedMsg{
 			Artist:    artist,
 			TopTracks: topTracks,
 			Albums:    allAlbums,
 		}
+		m.cache.SetArtistData(artistID, result)
+		return result
 	}
 }
 
@@ -835,6 +856,8 @@ func (m Model) addTrackToPlaylist(playlistID spotify.ID, playlistName string, tr
 		if err != nil {
 			return ErrMsg{Err: err}
 		}
+
+		m.cache.InvalidatePlaylistTracks(playlistID)
 
 		return TrackAddedToPlaylistMsg{
 			PlaylistName: playlistName,

@@ -102,6 +102,7 @@ type Model struct {
 	// Styling and keybindings
 	styles styles.Styles
 	keys   KeyMap
+	cache  *Cache
 }
 
 type ProgressTickMsg struct{}
@@ -124,6 +125,7 @@ func NewModel(client *spotify.Client) Model {
 		searchInput: ti,
 		styles:      styles.DefaultStyles(),
 		keys:        DefaultKeyMap(),
+		cache:       NewCache(),
 	}
 }
 
