@@ -2,6 +2,14 @@
 
 ## Recently Completed (Jan 13, 2026)
 
+- [x] **Responsive layout improvements** - @razobeckett
+  - Added layout constants (MinWidth=60, MinHeight=15, HorizontalPad, ListHeightSub, MinListHeight)
+  - Shows "Terminal too small" warning when below minimum size
+  - Replaced hardcoded magic numbers with constants and helper methods
+  - All lists now resize properly on window resize
+  - Safe width calculations in player component using max()
+  - Commit: `ddb907d`
+
 - [x] **Animated loading indicator** - @razobeckett
   - Added `fetching` and `fetchingDots` fields to Model
   - `FetchingTickMsg` cycles dots every 300ms ("fetching.", "fetching..", "fetching...")
@@ -57,8 +65,8 @@ _None currently_
 - [ ] Offline mode handling - Graceful degradation when no connection
 
 ### Polish
+- [x] ~~Responsive layout - Better handling of small terminal sizes~~ (completed Jan 13, 2026)
 - [ ] Error retry logic - Automatic retry with exponential backoff
-- [ ] Responsive layout - Better handling of small terminal sizes
 - [ ] Loading skeletons - Placeholder UI while content loads
 
 ### Tech Debt

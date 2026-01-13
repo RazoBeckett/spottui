@@ -14,14 +14,12 @@
 - **Files affected**: `internal/tui/commands.go`
 - **Effort**: Low
 
-### Hardcoded Dimensions
-- **Priority**: Low
-- **Description**: Some UI calculations use magic numbers for heights/widths.
-- **Files affected**: `internal/tui/render.go`, `internal/tui/views/`
-- **Effort**: Low
-
 ---
 
 ## Resolved
 
-_None yet_
+### Hardcoded Dimensions (Jan 13, 2026)
+- **Priority**: Low
+- **Description**: Some UI calculations used magic numbers for heights/widths.
+- **Resolution**: Added layout constants (MinWidth, MinHeight, HorizontalPad, ListHeightSub, MinListHeight) and helper methods (listWidth(), listHeight())
+- **Commit**: `ddb907d`
