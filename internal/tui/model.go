@@ -2,6 +2,8 @@ package tui
 
 import (
 	"context"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -83,6 +85,8 @@ type Model struct {
 	searching           bool
 	artistViewMode      string
 	lyricsData          string
+	lyricsSynced        []SyncedLyricLine
+	lyricsIsSynced      bool
 	lyricsTrackName     string
 	lyricsArtistName    string
 	lyricsScrollOffset  int
@@ -96,7 +100,33 @@ type Model struct {
 	keys   KeyMap
 }
 
-// NewModel creates the initial application model
+type SyncedLyricLine struct {
+	TimeMs int
+	Text   string
+}
+
+var lrcRegex = regexp.MustCompile(`\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)`)
+
+func parseLRC(lrc string) []SyncedLyricLine {
+	var lines []SyncedLyricLine
+	for _, line := range strings.Split(lrc, "\n") {
+		matches := lrcRegex.FindStringSubmatch(line)
+		if len(matches) == 5 {
+			min, _ := strconv.Atoi(matches[1])
+			sec, _ := strconv.Atoi(matches[2])
+			msStr := matches[3]
+			ms, _ := strconv.Atoi(msStr)
+			if len(msStr) == 2 {
+				ms *= 10
+			}
+			timeMs := min*60*1000 + sec*1000 + ms
+			text := strings.TrimSpace(matches[4])
+			lines = append(lines, SyncedLyricLine{TimeMs: timeMs, Text: text})
+		}
+	}
+	return lines
+}
+
 func NewModel(client *spotify.Client) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -306,10 +336,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case LyricsLoadedMsg:
 		m.fetchingLyrics = false
-		m.lyricsData = msg.Lyrics
 		m.lyricsTrackName = msg.TrackName
 		m.lyricsArtistName = msg.ArtistName
 		m.lyricsScrollOffset = 0
+
+		if msg.SyncedLyrics != "" {
+			m.lyricsSynced = parseLRC(msg.SyncedLyrics)
+			m.lyricsIsSynced = len(m.lyricsSynced) > 0
+			m.lyricsData = msg.Lyrics
+		} else {
+			m.lyricsSynced = nil
+			m.lyricsIsSynced = false
+			m.lyricsData = msg.Lyrics
+		}
+
 		m.view = ViewLyrics
 		return m, nil
 
@@ -1203,7 +1243,8 @@ func (m Model) renderLyrics() string {
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
 
-	if m.lyricsData == "" {
+	noLyricsAvailable := m.lyricsData == "" && len(m.lyricsSynced) == 0
+	if noLyricsAvailable {
 		noLyrics := m.styles.Muted.Render("No lyrics available for this track")
 		trackInfo := ""
 		if m.lyricsTrackName != "" {
@@ -1233,6 +1274,14 @@ func (m Model) renderLyrics() string {
 		lyricsAreaHeight = 1
 	}
 
+	if m.lyricsIsSynced && len(m.lyricsSynced) > 0 {
+		return m.renderSyncedLyrics(header, player, help, lyricsAreaHeight)
+	}
+
+	return m.renderPlainLyrics(header, player, help, lyricsAreaHeight)
+}
+
+func (m Model) renderPlainLyrics(header, player, help string, lyricsAreaHeight int) string {
 	lines := strings.Split(m.lyricsData, "\n")
 
 	startLine := m.lyricsScrollOffset
@@ -1254,6 +1303,71 @@ func (m Model) renderLyrics() string {
 	for _, line := range visibleLines {
 		centered := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(line)
 		styledLines = append(styledLines, centered)
+	}
+
+	lyricsContent := strings.Join(styledLines, "\n")
+	lyricsBox := lipgloss.NewStyle().Height(lyricsAreaHeight).Render(lyricsContent)
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		"",
+		header,
+		"",
+		lyricsBox,
+		player,
+		help,
+	)
+}
+
+func (m Model) renderSyncedLyrics(header, player, help string, lyricsAreaHeight int) string {
+	currentTimeMs := 0
+	if m.playbackState != nil {
+		currentTimeMs = int(m.playbackState.Progress)
+	}
+
+	currentLineIdx := 0
+	for i, line := range m.lyricsSynced {
+		if line.TimeMs <= currentTimeMs {
+			currentLineIdx = i
+		} else {
+			break
+		}
+	}
+
+	centerOffset := lyricsAreaHeight / 2
+	startLine := currentLineIdx - centerOffset
+	if startLine < 0 {
+		startLine = 0
+	}
+
+	endLine := startLine + lyricsAreaHeight
+	if endLine > len(m.lyricsSynced) {
+		endLine = len(m.lyricsSynced)
+		startLine = endLine - lyricsAreaHeight
+		if startLine < 0 {
+			startLine = 0
+		}
+	}
+
+	activeStyle := lipgloss.NewStyle().
+		Foreground(m.styles.ListItemActive.GetForeground()).
+		Bold(true)
+	mutedStyle := m.styles.Muted
+
+	var styledLines []string
+	for i := startLine; i < endLine; i++ {
+		line := m.lyricsSynced[i]
+		var styled string
+		if i == currentLineIdx {
+			styled = activeStyle.Render(line.Text)
+		} else {
+			styled = mutedStyle.Render(line.Text)
+		}
+		centered := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(styled)
+		styledLines = append(styledLines, centered)
+	}
+
+	for len(styledLines) < lyricsAreaHeight {
+		styledLines = append(styledLines, "")
 	}
 
 	lyricsContent := strings.Join(styledLines, "\n")

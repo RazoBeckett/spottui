@@ -716,9 +716,10 @@ func (m Model) playArtistTopTrack(track spotify.FullTrack) tea.Cmd {
 }
 
 type LyricsLoadedMsg struct {
-	Lyrics     string
-	TrackName  string
-	ArtistName string
+	Lyrics       string
+	SyncedLyrics string
+	TrackName    string
+	ArtistName   string
 }
 
 func (m Model) fetchLyrics(trackName, artistName string) tea.Cmd {
@@ -733,30 +734,32 @@ func (m Model) fetchLyrics(trackName, artistName string) tea.Cmd {
 
 		req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 		if err != nil {
-			return LyricsLoadedMsg{Lyrics: "", TrackName: trackName, ArtistName: artistName}
+			return LyricsLoadedMsg{Lyrics: "", SyncedLyrics: "", TrackName: trackName, ArtistName: artistName}
 		}
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			return LyricsLoadedMsg{Lyrics: "", TrackName: trackName, ArtistName: artistName}
+			return LyricsLoadedMsg{Lyrics: "", SyncedLyrics: "", TrackName: trackName, ArtistName: artistName}
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			return LyricsLoadedMsg{Lyrics: "", TrackName: trackName, ArtistName: artistName}
+			return LyricsLoadedMsg{Lyrics: "", SyncedLyrics: "", TrackName: trackName, ArtistName: artistName}
 		}
 
 		var result struct {
-			PlainLyrics string `json:"plainLyrics"`
+			PlainLyrics  string `json:"plainLyrics"`
+			SyncedLyrics string `json:"syncedLyrics"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-			return LyricsLoadedMsg{Lyrics: "", TrackName: trackName, ArtistName: artistName}
+			return LyricsLoadedMsg{Lyrics: "", SyncedLyrics: "", TrackName: trackName, ArtistName: artistName}
 		}
 
 		return LyricsLoadedMsg{
-			Lyrics:     result.PlainLyrics,
-			TrackName:  trackName,
-			ArtistName: artistName,
+			Lyrics:       result.PlainLyrics,
+			SyncedLyrics: result.SyncedLyrics,
+			TrackName:    trackName,
+			ArtistName:   artistName,
 		}
 	}
 }
