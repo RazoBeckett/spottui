@@ -1233,7 +1233,7 @@ func (m Model) renderHeader() string {
 
 func (m Model) renderHelpBar() string {
 	return m.styles.HelpBar.Render(
-		"↑/↓ navigate • enter select • esc back • space play/pause • n/p next/prev • +/- vol • s shuffle • r repeat • l like • L lyrics • S search • H history • a artist • d devices • ? help • q quit",
+		"↑/↓ navigate • enter select • esc back • space play/pause • ? help",
 	)
 }
 
