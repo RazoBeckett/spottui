@@ -99,6 +99,9 @@ type Model struct {
 	addToPlaylistTrack spotify.ID
 	addToPlaylistList  list.Model
 
+	fetching     bool
+	fetchingDots int
+
 	// Styling and keybindings
 	styles styles.Styles
 	keys   KeyMap
@@ -107,6 +110,7 @@ type Model struct {
 
 type ProgressTickMsg struct{}
 type SeekTickMsg struct{}
+type FetchingTickMsg struct{}
 
 func NewModel(client *spotify.Client) Model {
 	s := spinner.New()
@@ -193,6 +197,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.pollPlaybackState(), m.schedulePlaybackPoll())
 
 	case TracksLoadedMsg:
+		m.fetching = false
 		m.tracksData = msg.Tracks
 		listHeight := m.height - 12
 		if listHeight < 5 {
@@ -212,6 +217,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case AlbumTracksLoadedMsg:
+		m.fetching = false
 		m.albumTracksData = msg.Tracks
 		listHeight := m.height - 12
 		if listHeight < 5 {
@@ -260,10 +266,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case FetchingTickMsg:
+		if m.fetching {
+			m.fetchingDots = (m.fetchingDots + 1) % 4
+			return m, m.scheduleFetchingTick()
+		}
+		return m, nil
+
 	case PollPlaybackMsg:
 		return m, tea.Batch(m.pollPlaybackState(), m.schedulePlaybackPoll())
 
 	case DevicesLoadedMsg:
+		m.fetching = false
 		m.devicesData = msg.Devices
 		listHeight := m.height - 12
 		if listHeight < 5 {
@@ -274,6 +288,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case SearchResultsMsg:
+		m.fetching = false
 		m.searching = false
 		m.searchTracksData = msg.Tracks
 		m.searchAlbumsData = msg.Albums
@@ -291,6 +306,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case HistoryLoadedMsg:
+		m.fetching = false
 		m.historyData = msg.Items
 		listHeight := m.height - 12
 		if listHeight < 5 {
@@ -305,6 +321,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case ArtistLoadedMsg:
+		m.fetching = false
 		m.selectedArtist = msg.Artist
 		m.artistTopTracksData = msg.TopTracks
 		m.artistAlbumsData = msg.Albums
@@ -323,6 +340,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case ErrMsg:
+		m.fetching = false
 		m.errMsg = msg.Err.Error()
 		m.showError = true
 		return m, m.scheduleErrorDismiss()
@@ -339,6 +357,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case LyricsLoadedMsg:
+		m.fetching = false
 		m.fetchingLyrics = false
 		m.lyricsTrackName = msg.TrackName
 		m.lyricsArtistName = msg.ArtistName

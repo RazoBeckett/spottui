@@ -252,6 +252,23 @@ func (m Model) scheduleProgressTick() tea.Cmd {
 	})
 }
 
+func (m Model) scheduleFetchingTick() tea.Cmd {
+	return tea.Tick(300*time.Millisecond, func(t time.Time) tea.Msg {
+		return FetchingTickMsg{}
+	})
+}
+
+func (m *Model) startFetching() tea.Cmd {
+	m.fetching = true
+	m.fetchingDots = 0
+	return m.scheduleFetchingTick()
+}
+
+func (m *Model) stopFetching() {
+	m.fetching = false
+	m.fetchingDots = 0
+}
+
 // Playback control commands
 
 func (m Model) togglePlayback() tea.Cmd {

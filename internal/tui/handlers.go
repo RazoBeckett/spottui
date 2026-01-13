@@ -119,7 +119,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keys.Devices):
 		m.prevView = m.view
-		return m, m.fetchDevices()
+		m.fetching = true
+		m.fetchingDots = 0
+		return m, tea.Batch(m.fetchDevices(), m.scheduleFetchingTick())
 
 	case key.Matches(msg, m.keys.GlobalSearch):
 		m.prevView = m.view
@@ -130,7 +132,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keys.History):
 		m.prevView = m.view
-		return m, m.fetchRecentlyPlayed()
+		m.fetching = true
+		m.fetchingDots = 0
+		return m, tea.Batch(m.fetchRecentlyPlayed(), m.scheduleFetchingTick())
 
 	case key.Matches(msg, m.keys.Lyrics):
 		if m.playbackState != nil && m.playbackState.Item != nil {
@@ -141,7 +145,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			m.prevView = m.view
 			m.fetchingLyrics = true
-			return m, m.fetchLyrics(trackName, artistName)
+			m.fetching = true
+			m.fetchingDots = 0
+			return m, tea.Batch(m.fetchLyrics(trackName, artistName), m.scheduleFetchingTick())
 		}
 		return m, nil
 	}
@@ -184,10 +190,14 @@ func (m Model) handlePlaylistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch item := m.playlists.SelectedItem().(type) {
 		case views.PlaylistItem:
 			m.selectedPlaylist = &item.Playlist
-			return m, m.fetchTracks(item.Playlist.ID)
+			m.fetching = true
+			m.fetchingDots = 0
+			return m, tea.Batch(m.fetchTracks(item.Playlist.ID), m.scheduleFetchingTick())
 		case views.LikedSongsItem:
 			m.selectedPlaylist = nil
-			return m, m.fetchLikedTracks()
+			m.fetching = true
+			m.fetchingDots = 0
+			return m, tea.Batch(m.fetchLikedTracks(), m.scheduleFetchingTick())
 		}
 	}
 
@@ -207,7 +217,9 @@ func (m Model) handleTrackKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if item, ok := m.tracks.SelectedItem().(views.TrackItem); ok {
 			if len(item.Track.Track.Artists) > 0 {
 				m.prevView = m.view
-				return m, m.fetchArtist(item.Track.Track.Artists[0].ID)
+				m.fetching = true
+				m.fetchingDots = 0
+				return m, tea.Batch(m.fetchArtist(item.Track.Track.Artists[0].ID), m.scheduleFetchingTick())
 			}
 		}
 	}
@@ -248,7 +260,9 @@ func (m Model) handleAlbumKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if item, ok := m.albumTracks.SelectedItem().(views.AlbumTrackItem); ok {
 			if len(item.Track.Artists) > 0 {
 				m.prevView = m.view
-				return m, m.fetchArtist(item.Track.Artists[0].ID)
+				m.fetching = true
+				m.fetchingDots = 0
+				return m, tea.Batch(m.fetchArtist(item.Track.Artists[0].ID), m.scheduleFetchingTick())
 			}
 		}
 	}
@@ -319,14 +333,20 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				case views.SearchResultAlbum:
 					m.selectedAlbum = item.Album
 					m.prevView = m.view
-					return m, m.fetchAlbumTracks(item.Album.ID)
+					m.fetching = true
+					m.fetchingDots = 0
+					return m, tea.Batch(m.fetchAlbumTracks(item.Album.ID), m.scheduleFetchingTick())
 				case views.SearchResultPlaylist:
 					m.selectedPlaylist = item.Playlist
 					m.prevView = m.view
-					return m, m.fetchTracks(item.Playlist.ID)
+					m.fetching = true
+					m.fetchingDots = 0
+					return m, tea.Batch(m.fetchTracks(item.Playlist.ID), m.scheduleFetchingTick())
 				case views.SearchResultArtist:
 					m.prevView = m.view
-					return m, m.fetchArtist(item.Artist.ID)
+					m.fetching = true
+					m.fetchingDots = 0
+					return m, tea.Batch(m.fetchArtist(item.Artist.ID), m.scheduleFetchingTick())
 				}
 			}
 		}
@@ -337,7 +357,9 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if item, ok := m.searchResults.SelectedItem().(views.SearchItem); ok {
 				if item.Type == views.SearchResultTrack && item.Track != nil && len(item.Track.Artists) > 0 {
 					m.prevView = m.view
-					return m, m.fetchArtist(item.Track.Artists[0].ID)
+					m.fetching = true
+					m.fetchingDots = 0
+					return m, tea.Batch(m.fetchArtist(item.Track.Artists[0].ID), m.scheduleFetchingTick())
 				}
 			}
 		}
@@ -401,7 +423,9 @@ func (m Model) handleHistoryKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if item, ok := m.historyTracks.SelectedItem().(views.AlbumTrackItem); ok {
 			if len(item.Track.Artists) > 0 {
 				m.prevView = m.view
-				return m, m.fetchArtist(item.Track.Artists[0].ID)
+				m.fetching = true
+				m.fetchingDots = 0
+				return m, tea.Batch(m.fetchArtist(item.Track.Artists[0].ID), m.scheduleFetchingTick())
 			}
 		}
 	}
@@ -473,7 +497,9 @@ func (m Model) handleArtistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if item, ok := m.artistAlbums.SelectedItem().(views.ArtistAlbumItem); ok {
 				m.selectedAlbum = &item.Album
 				m.prevView = m.view
-				return m, m.fetchAlbumTracks(item.Album.ID)
+				m.fetching = true
+				m.fetchingDots = 0
+				return m, tea.Batch(m.fetchAlbumTracks(item.Album.ID), m.scheduleFetchingTick())
 			}
 		}
 	}

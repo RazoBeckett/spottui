@@ -281,6 +281,10 @@ func (m Model) renderNotification() string {
 	if m.showNotify {
 		return m.styles.Success.Render(m.notifyMsg)
 	}
+	if m.fetching {
+		dots := strings.Repeat(".", m.fetchingDots+1)
+		return m.styles.Muted.Render("fetching" + dots)
+	}
 	return ""
 }
 
