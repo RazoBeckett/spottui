@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -23,10 +24,12 @@ const (
 	ViewPlaylists
 	ViewTracks
 	ViewAlbum
+	ViewArtist
 	ViewDevices
 	ViewSearch
 	ViewHistory
 	ViewHelp
+	ViewLyrics
 )
 
 // Model is the root application state
@@ -40,34 +43,49 @@ type Model struct {
 	errMsg    string
 	showError bool
 
+	notifyMsg  string
+	showNotify bool
+
 	// Spotify client
 	client *spotify.Client
 	ctx    context.Context
 
 	// Sub-models (embedded Bubble Tea components)
-	spinner       spinner.Model
-	playlists     list.Model
-	tracks        list.Model
-	albumTracks   list.Model
-	devices       list.Model
-	searchInput   textinput.Model
-	searchResults list.Model
-	historyTracks list.Model
+	spinner         spinner.Model
+	playlists       list.Model
+	tracks          list.Model
+	albumTracks     list.Model
+	artistTopTracks list.Model
+	artistAlbums    list.Model
+	devices         list.Model
+	searchInput     textinput.Model
+	searchResults   list.Model
+	historyTracks   list.Model
 
 	// Data
 	currentUser         *spotify.PrivateUser
 	playlistsData       []spotify.SimplePlaylist
 	selectedPlaylist    *spotify.SimplePlaylist
 	selectedAlbum       *spotify.SimpleAlbum
+	selectedArtist      *spotify.FullArtist
 	tracksData          []spotify.PlaylistTrack
 	albumTracksData     []spotify.SimpleTrack
+	artistTopTracksData []spotify.FullTrack
+	artistAlbumsData    []spotify.SimpleAlbum
 	playbackState       *spotify.PlayerState
 	devicesData         []spotify.PlayerDevice
 	searchTracksData    []spotify.FullTrack
 	searchAlbumsData    []spotify.SimpleAlbum
 	searchPlaylistsData []spotify.SimplePlaylist
+	searchArtistsData   []spotify.FullArtist
 	historyData         []spotify.RecentlyPlayedItem
 	searching           bool
+	artistViewMode      string
+	lyricsData          string
+	lyricsTrackName     string
+	lyricsArtistName    string
+	lyricsScrollOffset  int
+	fetchingLyrics      bool
 
 	// Styling and keybindings
 	styles styles.Styles
@@ -220,6 +238,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searchTracksData = msg.Tracks
 		m.searchAlbumsData = msg.Albums
 		m.searchPlaylistsData = msg.Playlists
+		m.searchArtistsData = msg.Artists
 		listHeight := m.height - 14
 		if listHeight < 5 {
 			listHeight = 5
@@ -228,7 +247,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.playbackState != nil && m.playbackState.Item != nil {
 			currentTrack = string(m.playbackState.Item.URI)
 		}
-		m.searchResults = views.CreateSearchResultsList(msg.Tracks, msg.Albums, msg.Playlists, m.styles, currentTrack, m.width-4, listHeight)
+		m.searchResults = views.CreateSearchResultsList(msg.Tracks, msg.Albums, msg.Playlists, msg.Artists, m.styles, currentTrack, m.width-4, listHeight)
 		return m, nil
 
 	case HistoryLoadedMsg:
@@ -245,6 +264,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.view = ViewHistory
 		return m, nil
 
+	case ArtistLoadedMsg:
+		m.selectedArtist = msg.Artist
+		m.artistTopTracksData = msg.TopTracks
+		m.artistAlbumsData = msg.Albums
+		m.artistViewMode = "tracks"
+		listHeight := m.height - 14
+		if listHeight < 5 {
+			listHeight = 5
+		}
+		currentTrack := ""
+		if m.playbackState != nil && m.playbackState.Item != nil {
+			currentTrack = string(m.playbackState.Item.URI)
+		}
+		m.artistTopTracks = views.CreateArtistTopTracksList(msg.TopTracks, m.styles, currentTrack, m.width-4, listHeight)
+		m.artistAlbums = views.CreateArtistAlbumsList(msg.Albums, m.styles, m.width-4, listHeight)
+		m.view = ViewArtist
+		return m, nil
+
 	case ErrMsg:
 		m.errMsg = msg.Err.Error()
 		m.showError = true
@@ -259,6 +296,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.playbackState != nil {
 			m.playbackState.Device.Volume = spotify.Numeric(msg.Volume)
 		}
+		return m, nil
+
+	case LyricsLoadedMsg:
+		m.fetchingLyrics = false
+		m.lyricsData = msg.Lyrics
+		m.lyricsTrackName = msg.TrackName
+		m.lyricsArtistName = msg.ArtistName
+		m.lyricsScrollOffset = 0
+		m.view = ViewLyrics
+		return m, nil
+
+	case LikeToggledMsg:
+		action := "♥ Liked"
+		if !msg.IsLiked {
+			action = "♡ Unliked"
+		}
+		m.notifyMsg = action + ": " + msg.TrackName
+		m.showNotify = true
+		return m, m.scheduleNotifyDismiss()
+
+	case DismissNotifyMsg:
+		m.showNotify = false
+		m.notifyMsg = ""
 		return m, nil
 	}
 
@@ -280,35 +340,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View renders the UI
 func (m Model) View() string {
-	var content string
-
 	switch m.view {
 	case ViewLoading:
-		content = m.renderLoading()
+		return m.renderLoading()
 	case ViewPlaylists:
-		content = m.renderPlaylists()
+		return m.renderPlaylists()
 	case ViewTracks:
-		content = m.renderTracks()
+		return m.renderTracks()
 	case ViewAlbum:
-		content = m.renderAlbum()
+		return m.renderAlbum()
+	case ViewArtist:
+		return m.renderArtist()
 	case ViewDevices:
-		content = m.renderDevices()
+		return m.renderDevices()
 	case ViewSearch:
-		content = m.renderSearch()
+		return m.renderSearch()
 	case ViewHistory:
-		content = m.renderHistory()
+		return m.renderHistory()
 	case ViewHelp:
-		content = m.renderHelp()
+		return m.renderHelp()
+	case ViewLyrics:
+		return m.renderLyrics()
 	default:
-		content = "Unknown view"
+		return "Unknown view"
 	}
-
-	if m.showError {
-		errorBox := m.styles.Error.Render("⚠ " + m.errMsg)
-		return content + "\n" + errorBox
-	}
-
-	return content
 }
 
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -339,7 +394,15 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.view == ViewAlbum {
-			m.view = ViewSearch
+			m.view = m.prevView
+			return m, nil
+		}
+		if m.view == ViewArtist {
+			m.view = m.prevView
+			return m, nil
+		}
+		if m.view == ViewLyrics {
+			m.view = m.prevView
 			return m, nil
 		}
 
@@ -382,6 +445,19 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.History):
 		m.prevView = m.view
 		return m, m.fetchRecentlyPlayed()
+
+	case key.Matches(msg, m.keys.Lyrics):
+		if m.playbackState != nil && m.playbackState.Item != nil {
+			trackName := m.playbackState.Item.Name
+			artistName := ""
+			if len(m.playbackState.Item.Artists) > 0 {
+				artistName = m.playbackState.Item.Artists[0].Name
+			}
+			m.prevView = m.view
+			m.fetchingLyrics = true
+			return m, m.fetchLyrics(trackName, artistName)
+		}
+		return m, nil
 	}
 
 	// View-specific keybindings
@@ -395,6 +471,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case ViewAlbum:
 		return m.handleAlbumKeys(msg)
 
+	case ViewArtist:
+		return m.handleArtistKeys(msg)
+
 	case ViewDevices:
 		return m.handleDeviceKeys(msg)
 
@@ -403,6 +482,9 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case ViewHistory:
 		return m.handleHistoryKeys(msg)
+
+	case ViewLyrics:
+		return m.handleLyricsKeys(msg)
 	}
 
 	return m, nil
@@ -428,6 +510,21 @@ func (m Model) handleTrackKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if key.Matches(msg, m.keys.Artist) {
+		if item, ok := m.tracks.SelectedItem().(views.TrackItem); ok {
+			if len(item.Track.Track.Artists) > 0 {
+				m.prevView = m.view
+				return m, m.fetchArtist(item.Track.Track.Artists[0].ID)
+			}
+		}
+	}
+
+	if key.Matches(msg, m.keys.Like) {
+		if item, ok := m.tracks.SelectedItem().(views.TrackItem); ok {
+			return m, m.toggleLikeTrack(item.Track.Track.ID, item.Track.Track.Name)
+		}
+	}
+
 	var cmd tea.Cmd
 	m.tracks, cmd = m.tracks.Update(msg)
 	return m, cmd
@@ -437,6 +534,21 @@ func (m Model) handleAlbumKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Enter) {
 		if item, ok := m.albumTracks.SelectedItem().(views.AlbumTrackItem); ok {
 			return m, m.playAlbumTrack(item.Track)
+		}
+	}
+
+	if key.Matches(msg, m.keys.Artist) {
+		if item, ok := m.albumTracks.SelectedItem().(views.AlbumTrackItem); ok {
+			if len(item.Track.Artists) > 0 {
+				m.prevView = m.view
+				return m, m.fetchArtist(item.Track.Artists[0].ID)
+			}
+		}
+	}
+
+	if key.Matches(msg, m.keys.Like) {
+		if item, ok := m.albumTracks.SelectedItem().(views.AlbumTrackItem); ok {
+			return m, m.toggleLikeTrack(item.Track.ID, item.Track.Name)
 		}
 	}
 
@@ -495,10 +607,36 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					return m, m.playSearchItem(item)
 				case views.SearchResultAlbum:
 					m.selectedAlbum = item.Album
+					m.prevView = m.view
 					return m, m.fetchAlbumTracks(item.Album.ID)
 				case views.SearchResultPlaylist:
 					m.selectedPlaylist = item.Playlist
+					m.prevView = m.view
 					return m, m.fetchTracks(item.Playlist.ID)
+				case views.SearchResultArtist:
+					m.prevView = m.view
+					return m, m.fetchArtist(item.Artist.ID)
+				}
+			}
+		}
+	}
+
+	if key.Matches(msg, m.keys.Artist) {
+		if m.hasSearchResults() {
+			if item, ok := m.searchResults.SelectedItem().(views.SearchItem); ok {
+				if item.Type == views.SearchResultTrack && item.Track != nil && len(item.Track.Artists) > 0 {
+					m.prevView = m.view
+					return m, m.fetchArtist(item.Track.Artists[0].ID)
+				}
+			}
+		}
+	}
+
+	if key.Matches(msg, m.keys.Like) {
+		if m.hasSearchResults() {
+			if item, ok := m.searchResults.SelectedItem().(views.SearchItem); ok {
+				if item.Type == views.SearchResultTrack && item.Track != nil {
+					return m, m.toggleLikeTrack(item.Track.ID, item.Track.Name)
 				}
 			}
 		}
@@ -520,7 +658,7 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) hasSearchResults() bool {
-	return len(m.searchTracksData) > 0 || len(m.searchAlbumsData) > 0 || len(m.searchPlaylistsData) > 0
+	return len(m.searchTracksData) > 0 || len(m.searchAlbumsData) > 0 || len(m.searchPlaylistsData) > 0 || len(m.searchArtistsData) > 0
 }
 
 func (m Model) handleHistoryKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -535,8 +673,94 @@ func (m Model) handleHistoryKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	if key.Matches(msg, m.keys.Artist) {
+		if item, ok := m.historyTracks.SelectedItem().(views.AlbumTrackItem); ok {
+			if len(item.Track.Artists) > 0 {
+				m.prevView = m.view
+				return m, m.fetchArtist(item.Track.Artists[0].ID)
+			}
+		}
+	}
+
+	if key.Matches(msg, m.keys.Like) {
+		if item, ok := m.historyTracks.SelectedItem().(views.AlbumTrackItem); ok {
+			return m, m.toggleLikeTrack(item.Track.ID, item.Track.Name)
+		}
+	}
+
 	var cmd tea.Cmd
 	m.historyTracks, cmd = m.historyTracks.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleLyricsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if key.Matches(msg, m.keys.Back) {
+		m.view = m.prevView
+		return m, nil
+	}
+
+	lines := strings.Split(m.lyricsData, "\n")
+	visibleHeight := m.height - 6
+
+	switch {
+	case key.Matches(msg, m.keys.Up):
+		if m.lyricsScrollOffset > 0 {
+			m.lyricsScrollOffset--
+		}
+	case key.Matches(msg, m.keys.Down):
+		if m.lyricsScrollOffset < len(lines)-visibleHeight {
+			m.lyricsScrollOffset++
+		}
+	}
+
+	return m, nil
+}
+
+func (m Model) handleArtistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if key.Matches(msg, m.keys.Back) {
+		m.view = m.prevView
+		return m, nil
+	}
+
+	if msg.String() == "tab" {
+		if m.artistViewMode == "tracks" {
+			m.artistViewMode = "albums"
+		} else {
+			m.artistViewMode = "tracks"
+		}
+		return m, nil
+	}
+
+	if key.Matches(msg, m.keys.Enter) {
+		if m.artistViewMode == "tracks" {
+			if item, ok := m.artistTopTracks.SelectedItem().(views.ArtistTopTrackItem); ok {
+				return m, m.playArtistTopTrack(item.Track)
+			}
+		} else {
+			if item, ok := m.artistAlbums.SelectedItem().(views.ArtistAlbumItem); ok {
+				m.selectedAlbum = &item.Album
+				m.prevView = m.view
+				return m, m.fetchAlbumTracks(item.Album.ID)
+			}
+		}
+	}
+
+	if key.Matches(msg, m.keys.Like) {
+		if m.artistViewMode == "tracks" {
+			if item, ok := m.artistTopTracks.SelectedItem().(views.ArtistTopTrackItem); ok {
+				return m, m.toggleLikeTrack(item.Track.ID, item.Track.Name)
+			}
+		}
+	}
+
+	if m.artistViewMode == "tracks" {
+		var cmd tea.Cmd
+		m.artistTopTracks, cmd = m.artistTopTracks.Update(msg)
+		return m, cmd
+	}
+
+	var cmd tea.Cmd
+	m.artistAlbums, cmd = m.artistAlbums.Update(msg)
 	return m, cmd
 }
 
@@ -550,13 +774,15 @@ func (m Model) renderLoading() string {
 
 func (m Model) renderPlaylists() string {
 	header := m.renderHeader()
+	notification := m.renderNotification()
 	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
 	help := m.renderHelpBar()
 
 	headerHeight := lipgloss.Height(header)
+	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - playerHeight - helpHeight
+	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
 
 	if contentHeight < 1 {
 		contentHeight = 1
@@ -567,6 +793,7 @@ func (m Model) renderPlaylists() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
 		content,
+		notification,
 		player,
 		help,
 	)
@@ -574,13 +801,15 @@ func (m Model) renderPlaylists() string {
 
 func (m Model) renderTracks() string {
 	header := m.renderHeader()
+	notification := m.renderNotification()
 	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
 	help := m.renderHelpBar()
 
 	headerHeight := lipgloss.Height(header)
+	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - playerHeight - helpHeight
+	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
 
 	if contentHeight < 1 {
 		contentHeight = 1
@@ -591,6 +820,7 @@ func (m Model) renderTracks() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
 		content,
+		notification,
 		player,
 		help,
 	)
@@ -598,13 +828,15 @@ func (m Model) renderTracks() string {
 
 func (m Model) renderAlbum() string {
 	header := m.renderHeader()
+	notification := m.renderNotification()
 	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
 	help := m.renderHelpBar()
 
 	headerHeight := lipgloss.Height(header)
+	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - playerHeight - helpHeight
+	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
 
 	if contentHeight < 1 {
 		contentHeight = 1
@@ -615,6 +847,7 @@ func (m Model) renderAlbum() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
 		content,
+		notification,
 		player,
 		help,
 	)
@@ -647,14 +880,16 @@ func (m Model) renderSearch() string {
 	inputStyle := m.styles.Header.Copy().Padding(0, 1)
 	searchBox := inputStyle.Render("🔍 " + m.searchInput.View())
 
+	notification := m.renderNotification()
 	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
 	help := m.styles.HelpBar.Render("enter search • ↑/↓ navigate results • esc back")
 
 	headerHeight := lipgloss.Height(header)
 	searchBoxHeight := lipgloss.Height(searchBox)
+	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - searchBoxHeight - playerHeight - helpHeight
+	contentHeight := m.height - headerHeight - searchBoxHeight - notificationHeight - playerHeight - helpHeight
 
 	if contentHeight < 1 {
 		contentHeight = 1
@@ -677,6 +912,7 @@ func (m Model) renderSearch() string {
 		header,
 		searchBox,
 		content,
+		notification,
 		player,
 		help,
 	)
@@ -684,13 +920,15 @@ func (m Model) renderSearch() string {
 
 func (m Model) renderHistory() string {
 	header := m.renderHeader()
+	notification := m.renderNotification()
 	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
 	help := m.renderHelpBar()
 
 	headerHeight := lipgloss.Height(header)
+	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - playerHeight - helpHeight
+	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
 
 	if contentHeight < 1 {
 		contentHeight = 1
@@ -701,6 +939,74 @@ func (m Model) renderHistory() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
 		content,
+		notification,
+		player,
+		help,
+	)
+}
+
+func (m Model) renderArtist() string {
+	header := m.renderHeader()
+
+	artistName := "Unknown Artist"
+	artistInfo := ""
+	if m.selectedArtist != nil {
+		artistName = m.selectedArtist.Name
+		if len(m.selectedArtist.Genres) > 0 {
+			genres := m.selectedArtist.Genres
+			if len(genres) > 3 {
+				genres = genres[:3]
+			}
+			artistInfo = " • " + strings.Join(genres, ", ")
+		}
+	}
+
+	artistHeader := m.styles.ListTitle.Render("󰠃 " + artistName + artistInfo)
+
+	tabStyle := m.styles.Muted
+	activeTabStyle := m.styles.ListItemActive
+	tracksTab := "Top Tracks"
+	albumsTab := "Albums"
+	if m.artistViewMode == "tracks" {
+		tracksTab = activeTabStyle.Render("[" + tracksTab + "]")
+		albumsTab = tabStyle.Render(" " + albumsTab + " ")
+	} else {
+		tracksTab = tabStyle.Render(" " + tracksTab + " ")
+		albumsTab = activeTabStyle.Render("[" + albumsTab + "]")
+	}
+	tabs := "  " + tracksTab + "  " + albumsTab
+
+	notification := m.renderNotification()
+	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	help := m.styles.HelpBar.Render("tab switch view • enter play/select • a view artist • esc back")
+
+	headerHeight := lipgloss.Height(header)
+	artistHeaderHeight := lipgloss.Height(artistHeader)
+	tabsHeight := 1
+	notificationHeight := lipgloss.Height(notification)
+	playerHeight := lipgloss.Height(player)
+	helpHeight := lipgloss.Height(help)
+	contentHeight := m.height - headerHeight - artistHeaderHeight - tabsHeight - notificationHeight - playerHeight - helpHeight
+
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+
+	var listView string
+	if m.artistViewMode == "tracks" {
+		listView = m.artistTopTracks.View()
+	} else {
+		listView = m.artistAlbums.View()
+	}
+
+	content := lipgloss.NewStyle().Height(contentHeight).Render(listView)
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		header,
+		artistHeader,
+		tabs,
+		content,
+		notification,
 		player,
 		help,
 	)
@@ -720,8 +1026,18 @@ func (m Model) renderHeader() string {
 
 func (m Model) renderHelpBar() string {
 	return m.styles.HelpBar.Render(
-		"↑/↓ navigate • enter select • esc back • space play/pause • n/p next/prev • +/- vol • s shuffle • r repeat • S search • H history • d devices • ? help • q quit",
+		"↑/↓ navigate • enter select • esc back • space play/pause • n/p next/prev • +/- vol • s shuffle • r repeat • l like • L lyrics • S search • H history • a artist • d devices • ? help • q quit",
 	)
+}
+
+func (m Model) renderNotification() string {
+	if m.showError {
+		return m.styles.Error.Render("⚠ " + m.errMsg)
+	}
+	if m.showNotify {
+		return m.styles.Success.Render(m.notifyMsg)
+	}
+	return ""
 }
 
 func (m Model) renderHelp() string {
@@ -736,6 +1052,7 @@ func (m Model) renderHelp() string {
 │  esc      Go back                   │
 │  /        Filter list               │
 │  S        Global search             │
+│  a        View artist               │
 │                                     │
 │  Playback                           │
 │  space    Play/Pause                │
@@ -745,6 +1062,8 @@ func (m Model) renderHelp() string {
 │  -        Volume down               │
 │  s        Toggle shuffle            │
 │  r        Cycle repeat mode         │
+│  l        Like/unlike track         │
+│  L        Show lyrics               │
 │                                     │
 │  General                            │
 │  H        Recently played           │
@@ -760,5 +1079,78 @@ Press ? or esc to close this help screen.
 		m.width, m.height,
 		lipgloss.Center, lipgloss.Center,
 		m.styles.Dialog.Render(help),
+	)
+}
+
+func (m Model) renderLyrics() string {
+	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	help := m.styles.HelpBar.Render("↑/↓ scroll • esc back")
+
+	playerHeight := lipgloss.Height(player)
+	helpHeight := lipgloss.Height(help)
+
+	if m.lyricsData == "" {
+		noLyrics := m.styles.Muted.Render("No lyrics available for this track")
+		trackInfo := ""
+		if m.lyricsTrackName != "" {
+			trackInfo = m.styles.ListTitle.Render(m.lyricsTrackName+" - "+m.lyricsArtistName) + "\n\n"
+		}
+		content := trackInfo + noLyrics
+		contentHeight := m.height - playerHeight - helpHeight
+		centeredContent := lipgloss.Place(
+			m.width, contentHeight,
+			lipgloss.Center, lipgloss.Center,
+			content,
+		)
+		return lipgloss.JoinVertical(lipgloss.Left,
+			centeredContent,
+			player,
+			help,
+		)
+	}
+
+	header := m.styles.ListTitle.Render("♫ " + m.lyricsTrackName + " - " + m.lyricsArtistName)
+	header = lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(header)
+
+	headerHeight := lipgloss.Height(header)
+	lyricsAreaHeight := m.height - headerHeight - playerHeight - helpHeight - 2
+
+	if lyricsAreaHeight < 1 {
+		lyricsAreaHeight = 1
+	}
+
+	lines := strings.Split(m.lyricsData, "\n")
+
+	startLine := m.lyricsScrollOffset
+	if startLine > len(lines)-lyricsAreaHeight {
+		startLine = len(lines) - lyricsAreaHeight
+	}
+	if startLine < 0 {
+		startLine = 0
+	}
+
+	endLine := startLine + lyricsAreaHeight
+	if endLine > len(lines) {
+		endLine = len(lines)
+	}
+
+	visibleLines := lines[startLine:endLine]
+
+	var styledLines []string
+	for _, line := range visibleLines {
+		centered := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(line)
+		styledLines = append(styledLines, centered)
+	}
+
+	lyricsContent := strings.Join(styledLines, "\n")
+	lyricsBox := lipgloss.NewStyle().Height(lyricsAreaHeight).Render(lyricsContent)
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		"",
+		header,
+		"",
+		lyricsBox,
+		player,
+		help,
 	)
 }
