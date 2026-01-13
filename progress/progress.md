@@ -2,6 +2,13 @@
 
 ## Recently Completed (Jan 14, 2026)
 
+- [x] **Loading skeletons - layout fix** - @razobeckett
+  - Fixed nil pointer panic: clear data slices instead of uninitialized list items
+  - Added titles to skeleton views for consistent layout (playlist name, album name, etc.)
+  - Skeleton views now match loaded state structure
+  - Files: `internal/tui/handlers.go`, `internal/tui/render.go`
+  - Commit: `6868b93`
+
 - [x] **Loading skeletons fix** - @razobeckett
   - Fixed skeleton not displaying: view now switches BEFORE fetch commands
   - Updated all handlers: playlist, album, artist, search, history, devices
@@ -13,7 +20,7 @@
   - Added `renderSkeleton()` function using ░ block characters
   - Skeleton displays placeholder bars mimicking list item structure
   - Integrated into 6 views: tracks, album, devices, search, history, artist
-  - Shows skeleton when `fetching=true` AND list is empty
+  - Shows skeleton when `fetching=true` AND data is empty
   - Skeleton count adapts to available content height
   - Files: `internal/tui/render.go`
 
