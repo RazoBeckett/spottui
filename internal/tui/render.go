@@ -70,9 +70,15 @@ func (m Model) renderTracks() string {
 	}
 
 	var contentView string
-	if m.fetching && len(m.tracks.Items()) == 0 {
-		skeletonCount := contentHeight / 2
-		contentView = m.renderSkeleton(skeletonCount, m.listWidth())
+	if m.fetching && len(m.tracksData) == 0 {
+		title := "Liked Songs"
+		if m.selectedPlaylist != nil {
+			title = m.selectedPlaylist.Name
+		}
+		titleLine := m.styles.ListItemActive.Render("  " + title)
+		skeletonCount := (contentHeight - 2) / 2
+		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
+		contentView = titleLine + "\n\n" + skeleton
 	} else {
 		contentView = m.tracks.View()
 	}
@@ -104,9 +110,15 @@ func (m Model) renderAlbum() string {
 	}
 
 	var contentView string
-	if m.fetching && len(m.albumTracks.Items()) == 0 {
-		skeletonCount := contentHeight / 2
-		contentView = m.renderSkeleton(skeletonCount, m.listWidth())
+	if m.fetching && len(m.albumTracksData) == 0 {
+		title := "Album"
+		if m.selectedAlbum != nil {
+			title = m.selectedAlbum.Name
+		}
+		titleLine := m.styles.ListItemActive.Render("  " + title)
+		skeletonCount := (contentHeight - 2) / 2
+		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
+		contentView = titleLine + "\n\n" + skeleton
 	} else {
 		contentView = m.albumTracks.View()
 	}
@@ -134,9 +146,11 @@ func (m Model) renderDevices() string {
 	}
 
 	var contentView string
-	if m.fetching && len(m.devices.Items()) == 0 {
-		skeletonCount := contentHeight / 2
-		contentView = m.renderSkeleton(skeletonCount, m.listWidth())
+	if m.fetching && len(m.devicesData) == 0 {
+		titleLine := m.styles.ListItemActive.Render("  Devices")
+		skeletonCount := (contentHeight - 2) / 2
+		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
+		contentView = titleLine + "\n\n" + skeleton
 	} else {
 		contentView = m.devices.View()
 	}
@@ -174,8 +188,10 @@ func (m Model) renderSearch() string {
 	if m.hasSearchResults() {
 		contentView = m.searchResults.View()
 	} else if m.searching {
-		skeletonCount := contentHeight / 2
-		contentView = m.renderSkeleton(skeletonCount, m.listWidth())
+		titleLine := m.styles.ListItemActive.Render("  Search Results")
+		skeletonCount := (contentHeight - 2) / 2
+		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
+		contentView = titleLine + "\n\n" + skeleton
 	} else if m.searchInput.Value() != "" && !m.searchInput.Focused() {
 		contentView = m.styles.Muted.Render("\n  No results found")
 	} else {
@@ -211,9 +227,11 @@ func (m Model) renderHistory() string {
 	}
 
 	var contentView string
-	if m.fetching && len(m.historyTracks.Items()) == 0 {
-		skeletonCount := contentHeight / 2
-		contentView = m.renderSkeleton(skeletonCount, m.listWidth())
+	if m.fetching && len(m.historyData) == 0 {
+		titleLine := m.styles.ListItemActive.Render("  Recently Played")
+		skeletonCount := (contentHeight - 2) / 2
+		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
+		contentView = titleLine + "\n\n" + skeleton
 	} else {
 		contentView = m.historyTracks.View()
 	}
@@ -276,8 +294,8 @@ func (m Model) renderArtist() string {
 	}
 
 	var listView string
-	if m.fetching && len(m.artistTopTracks.Items()) == 0 && len(m.artistAlbums.Items()) == 0 {
-		skeletonCount := contentHeight / 2
+	if m.fetching && len(m.artistTopTracksData) == 0 && len(m.artistAlbumsData) == 0 {
+		skeletonCount := (contentHeight - 2) / 2
 		listView = m.renderSkeleton(skeletonCount, m.listWidth())
 	} else if m.artistViewMode == "tracks" {
 		listView = m.artistTopTracks.View()

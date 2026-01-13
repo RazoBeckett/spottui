@@ -122,6 +122,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.fetching = true
 		m.fetchingDots = 0
 		m.view = ViewDevices
+		m.devicesData = nil
 		return m, tea.Batch(m.fetchDevices(), m.scheduleFetchingTick())
 
 	case key.Matches(msg, m.keys.GlobalSearch):
@@ -136,6 +137,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.fetching = true
 		m.fetchingDots = 0
 		m.view = ViewHistory
+		m.historyData = nil
 		return m, tea.Batch(m.fetchRecentlyPlayed(), m.scheduleFetchingTick())
 
 	case key.Matches(msg, m.keys.Lyrics):
@@ -195,12 +197,14 @@ func (m Model) handlePlaylistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.fetching = true
 			m.fetchingDots = 0
 			m.view = ViewTracks
+			m.tracksData = nil
 			return m, tea.Batch(m.fetchTracks(item.Playlist.ID), m.scheduleFetchingTick())
 		case views.LikedSongsItem:
 			m.selectedPlaylist = nil
 			m.fetching = true
 			m.fetchingDots = 0
 			m.view = ViewTracks
+			m.tracksData = nil
 			return m, tea.Batch(m.fetchLikedTracks(), m.scheduleFetchingTick())
 		}
 	}
@@ -224,6 +228,8 @@ func (m Model) handleTrackKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.fetching = true
 				m.fetchingDots = 0
 				m.view = ViewArtist
+				m.artistTopTracksData = nil
+				m.artistAlbumsData = nil
 				return m, tea.Batch(m.fetchArtist(item.Track.Track.Artists[0].ID), m.scheduleFetchingTick())
 			}
 		}
@@ -268,6 +274,8 @@ func (m Model) handleAlbumKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.fetching = true
 				m.fetchingDots = 0
 				m.view = ViewArtist
+				m.artistTopTracksData = nil
+				m.artistAlbumsData = nil
 				return m, tea.Batch(m.fetchArtist(item.Track.Artists[0].ID), m.scheduleFetchingTick())
 			}
 		}
@@ -342,6 +350,7 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.fetching = true
 					m.fetchingDots = 0
 					m.view = ViewAlbum
+					m.albumTracksData = nil
 					return m, tea.Batch(m.fetchAlbumTracks(item.Album.ID), m.scheduleFetchingTick())
 				case views.SearchResultPlaylist:
 					m.selectedPlaylist = item.Playlist
@@ -349,12 +358,15 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.fetching = true
 					m.fetchingDots = 0
 					m.view = ViewTracks
+					m.tracksData = nil
 					return m, tea.Batch(m.fetchTracks(item.Playlist.ID), m.scheduleFetchingTick())
 				case views.SearchResultArtist:
 					m.prevView = m.view
 					m.fetching = true
 					m.fetchingDots = 0
 					m.view = ViewArtist
+					m.artistTopTracksData = nil
+					m.artistAlbumsData = nil
 					return m, tea.Batch(m.fetchArtist(item.Artist.ID), m.scheduleFetchingTick())
 				}
 			}
@@ -369,6 +381,8 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.fetching = true
 					m.fetchingDots = 0
 					m.view = ViewArtist
+					m.artistTopTracksData = nil
+					m.artistAlbumsData = nil
 					return m, tea.Batch(m.fetchArtist(item.Track.Artists[0].ID), m.scheduleFetchingTick())
 				}
 			}
@@ -436,6 +450,8 @@ func (m Model) handleHistoryKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.fetching = true
 				m.fetchingDots = 0
 				m.view = ViewArtist
+				m.artistTopTracksData = nil
+				m.artistAlbumsData = nil
 				return m, tea.Batch(m.fetchArtist(item.Track.Artists[0].ID), m.scheduleFetchingTick())
 			}
 		}
@@ -511,6 +527,7 @@ func (m Model) handleArtistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.fetching = true
 				m.fetchingDots = 0
 				m.view = ViewAlbum
+				m.albumTracksData = nil
 				return m, tea.Batch(m.fetchAlbumTracks(item.Album.ID), m.scheduleFetchingTick())
 			}
 		}
