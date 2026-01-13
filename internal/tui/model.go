@@ -216,7 +216,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.tracks.Title = "Liked Songs"
 		}
-		m.view = ViewTracks
 		return m, nil
 
 	case AlbumTracksLoadedMsg:
@@ -230,7 +229,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.selectedAlbum != nil {
 			m.albumTracks.Title = m.selectedAlbum.Name
 		}
-		m.view = ViewAlbum
 		return m, nil
 
 	case PlaybackStateMsg:
@@ -279,7 +277,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.fetching = false
 		m.devicesData = msg.Devices
 		m.devices = views.CreateDeviceList(msg.Devices, m.styles, m.listWidth(), m.listHeight())
-		m.view = ViewDevices
 		return m, nil
 
 	case SearchResultsMsg:
@@ -304,7 +301,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			currentTrack = string(m.playbackState.Item.URI)
 		}
 		m.historyTracks = views.CreateHistoryList(msg.Items, m.styles, currentTrack, m.listWidth(), m.listHeight())
-		m.view = ViewHistory
 		return m, nil
 
 	case ArtistLoadedMsg:
@@ -319,7 +315,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.artistTopTracks = views.CreateArtistTopTracksList(msg.TopTracks, m.styles, currentTrack, m.listWidth(), m.listHeight())
 		m.artistAlbums = views.CreateArtistAlbumsList(msg.Albums, m.styles, m.listWidth(), m.listHeight())
-		m.view = ViewArtist
 		return m, nil
 
 	case ErrMsg:
