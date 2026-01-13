@@ -283,7 +283,8 @@ func (m Model) renderNotification() string {
 	}
 	if m.fetching {
 		dots := strings.Repeat(".", m.fetchingDots+1)
-		return m.styles.Muted.Render("fetching" + dots)
+		msg := m.styles.Muted.Render("fetching" + dots)
+		return lipgloss.PlaceHorizontal(m.width, lipgloss.Center, msg)
 	}
 	return ""
 }
