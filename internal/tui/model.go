@@ -172,7 +172,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if listHeight < 5 {
 			listHeight = 5
 		}
-		m.playlists = views.CreatePlaylistList(msg.Playlists, m.styles, m.width-4, listHeight)
+		m.playlists = views.CreatePlaylistList(msg.Playlists, msg.LikedSongsTotal, m.styles, m.width-4, listHeight)
 		m.view = ViewPlaylists
 		return m, tea.Batch(m.pollPlaybackState(), m.schedulePlaybackPoll())
 
@@ -189,6 +189,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.tracks = views.CreateTrackList(msg.Tracks, m.styles, currentTrack, m.width-4, listHeight)
 		if m.selectedPlaylist != nil {
 			m.tracks.Title = m.selectedPlaylist.Name
+		} else {
+			m.tracks.Title = "Liked Songs"
 		}
 		m.view = ViewTracks
 		return m, nil
@@ -492,9 +494,13 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m Model) handlePlaylistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Enter) {
-		if item, ok := m.playlists.SelectedItem().(views.PlaylistItem); ok {
+		switch item := m.playlists.SelectedItem().(type) {
+		case views.PlaylistItem:
 			m.selectedPlaylist = &item.Playlist
 			return m, m.fetchTracks(item.Playlist.ID)
+		case views.LikedSongsItem:
+			m.selectedPlaylist = nil
+			return m, m.fetchLikedTracks()
 		}
 	}
 

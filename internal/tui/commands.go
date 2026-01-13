@@ -18,8 +18,9 @@ import (
 
 // UserDataMsg contains initial user data loaded at startup
 type UserDataMsg struct {
-	User      *spotify.PrivateUser
-	Playlists []spotify.SimplePlaylist
+	User            *spotify.PrivateUser
+	Playlists       []spotify.SimplePlaylist
+	LikedSongsTotal int
 }
 
 // TracksLoadedMsg contains tracks for a playlist
@@ -83,13 +84,11 @@ func (m Model) fetchInitialData() tea.Cmd {
 		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
 		defer cancel()
 
-		// Fetch user info
 		user, err := m.client.CurrentUser(ctx)
 		if err != nil {
 			return ErrMsg{Err: err}
 		}
 
-		// Fetch playlists (paginated)
 		var allPlaylists []spotify.SimplePlaylist
 		limit := 50
 		offset := 0
@@ -109,9 +108,16 @@ func (m Model) fetchInitialData() tea.Cmd {
 			offset += limit
 		}
 
+		likedSongs, err := m.client.CurrentUsersTracks(ctx, spotify.Limit(1))
+		likedTotal := 0
+		if err == nil {
+			likedTotal = int(likedSongs.Total)
+		}
+
 		return UserDataMsg{
-			User:      user,
-			Playlists: allPlaylists,
+			User:            user,
+			Playlists:       allPlaylists,
+			LikedSongsTotal: likedTotal,
 		}
 	}
 }
@@ -135,6 +141,38 @@ func (m Model) fetchTracks(playlistID spotify.ID) tea.Cmd {
 			allTracks = append(allTracks, tracks.Tracks...)
 
 			if len(tracks.Tracks) < limit {
+				break
+			}
+			offset += limit
+		}
+
+		return TracksLoadedMsg{Tracks: allTracks}
+	}
+}
+
+func (m Model) fetchLikedTracks() tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
+		defer cancel()
+
+		var allTracks []spotify.PlaylistTrack
+		limit := 50
+		offset := 0
+
+		for {
+			saved, err := m.client.CurrentUsersTracks(ctx,
+				spotify.Limit(limit), spotify.Offset(offset))
+			if err != nil {
+				return ErrMsg{Err: err}
+			}
+
+			for _, s := range saved.Tracks {
+				allTracks = append(allTracks, spotify.PlaylistTrack{
+					Track: s.FullTrack,
+				})
+			}
+
+			if len(saved.Tracks) < limit {
 				break
 			}
 			offset += limit

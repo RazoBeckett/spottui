@@ -22,6 +22,15 @@ func (i PlaylistItem) Title() string       { return i.Playlist.Name }
 func (i PlaylistItem) Description() string { return fmt.Sprintf("%d tracks", i.Playlist.Tracks.Total) }
 func (i PlaylistItem) FilterValue() string { return i.Playlist.Name }
 
+// LikedSongsItem is a special playlist entry for user's saved tracks
+type LikedSongsItem struct {
+	Total int
+}
+
+func (i LikedSongsItem) Title() string       { return "Liked Songs" }
+func (i LikedSongsItem) Description() string { return fmt.Sprintf("%d tracks", i.Total) }
+func (i LikedSongsItem) FilterValue() string { return "Liked Songs" }
+
 // TrackItem implements list.Item for tracks
 type TrackItem struct {
 	Track spotify.PlaylistTrack
@@ -60,18 +69,28 @@ func (d PlaylistDelegate) Spacing() int                            { return 0 }
 func (d PlaylistDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d PlaylistDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(PlaylistItem)
-	if !ok {
+	var itemTitle, itemDesc string
+
+	switch i := listItem.(type) {
+	case PlaylistItem:
+		itemTitle = i.Title()
+		itemDesc = i.Description()
+	case LikedSongsItem:
+		itemTitle = "♥ " + i.Title()
+		itemDesc = i.Description()
+	default:
 		return
 	}
 
+	isSelected := index == m.Index()
+
 	var title, desc string
-	if index == m.Index() {
-		title = d.Styles.ListItemActive.Render("▶ " + i.Title())
-		desc = d.Styles.Muted.Render("  " + i.Description())
+	if isSelected {
+		title = d.Styles.ListItemActive.Render("▶ " + itemTitle)
+		desc = d.Styles.Muted.Render("  " + itemDesc)
 	} else {
-		title = d.Styles.ListItem.Render("  " + i.Title())
-		desc = d.Styles.Muted.Render("  " + i.Description())
+		title = d.Styles.ListItem.Render("  " + itemTitle)
+		desc = d.Styles.Muted.Render("  " + itemDesc)
 	}
 
 	fmt.Fprint(w, title+"\n"+desc)
@@ -120,10 +139,13 @@ func (d TrackDelegate) Render(w io.Writer, m list.Model, index int, listItem lis
 }
 
 // CreatePlaylistList creates a new list model for playlists
-func CreatePlaylistList(playlists []spotify.SimplePlaylist, s styles.Styles, width, height int) list.Model {
-	items := make([]list.Item, len(playlists))
-	for i, p := range playlists {
-		items[i] = PlaylistItem{Playlist: p}
+func CreatePlaylistList(playlists []spotify.SimplePlaylist, likedSongsTotal int, s styles.Styles, width, height int) list.Model {
+	items := make([]list.Item, 0, len(playlists)+1)
+
+	items = append(items, LikedSongsItem{Total: likedSongsTotal})
+
+	for _, p := range playlists {
+		items = append(items, PlaylistItem{Playlist: p})
 	}
 
 	delegate := PlaylistDelegate{Styles: s}
