@@ -327,6 +327,7 @@ const (
 	SearchResultTrack SearchResultType = iota
 	SearchResultAlbum
 	SearchResultPlaylist
+	SearchResultArtist
 )
 
 type SearchItem struct {
@@ -334,6 +335,7 @@ type SearchItem struct {
 	Track    *spotify.FullTrack
 	Album    *spotify.SimpleAlbum
 	Playlist *spotify.SimplePlaylist
+	Artist   *spotify.FullArtist
 }
 
 func (i SearchItem) Title() string {
@@ -353,6 +355,11 @@ func (i SearchItem) Title() string {
 			return "Unknown Playlist"
 		}
 		return i.Playlist.Name
+	case SearchResultArtist:
+		if i.Artist.Name == "" {
+			return "Unknown Artist"
+		}
+		return i.Artist.Name
 	}
 	return "Unknown"
 }
@@ -361,18 +368,34 @@ func (i SearchItem) Description() string {
 	switch i.Type {
 	case SearchResultTrack:
 		artists := artistNames(i.Track.Artists)
-		return artists + " - Song"
+		return artists + " • Song"
 	case SearchResultAlbum:
 		artists := simpleArtistNames(i.Album.Artists)
-		return artists + " - Album"
+		return artists + " • Album"
 	case SearchResultPlaylist:
 		owner := "Unknown"
 		if i.Playlist.Owner.DisplayName != "" {
 			owner = i.Playlist.Owner.DisplayName
 		}
-		return owner + " - Playlist"
+		return owner + " • Playlist"
+	case SearchResultArtist:
+		followers := ""
+		if i.Artist.Followers.Count > 0 {
+			followers = formatFollowers(i.Artist.Followers.Count) + " followers • "
+		}
+		return followers + "Artist"
 	}
 	return ""
+}
+
+func formatFollowers(count spotify.Numeric) string {
+	if count >= 1000000 {
+		return fmt.Sprintf("%.1fM", float64(count)/1000000)
+	}
+	if count >= 1000 {
+		return fmt.Sprintf("%.1fK", float64(count)/1000)
+	}
+	return fmt.Sprintf("%d", count)
 }
 
 func (i SearchItem) FilterValue() string {
@@ -387,6 +410,8 @@ func (i SearchItem) URI() string {
 		return string(i.Album.URI)
 	case SearchResultPlaylist:
 		return string(i.Playlist.URI)
+	case SearchResultArtist:
+		return string(i.Artist.URI)
 	}
 	return ""
 }
@@ -447,7 +472,7 @@ func (d SearchItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 	fmt.Fprint(w, title+"\n"+desc)
 }
 
-func CreateSearchResultsList(tracks []spotify.FullTrack, albums []spotify.SimpleAlbum, playlists []spotify.SimplePlaylist, s styles.Styles, currentTrackURI string, width, height int) list.Model {
+func CreateSearchResultsList(tracks []spotify.FullTrack, albums []spotify.SimpleAlbum, playlists []spotify.SimplePlaylist, artists []spotify.FullArtist, s styles.Styles, currentTrackURI string, width, height int) list.Model {
 	var items []list.Item
 
 	for _, t := range tracks {
@@ -461,6 +486,10 @@ func CreateSearchResultsList(tracks []spotify.FullTrack, albums []spotify.Simple
 	for _, p := range playlists {
 		playlist := p
 		items = append(items, SearchItem{Type: SearchResultPlaylist, Playlist: &playlist})
+	}
+	for _, ar := range artists {
+		artist := ar
+		items = append(items, SearchItem{Type: SearchResultArtist, Artist: &artist})
 	}
 
 	delegate := SearchItemDelegate{Styles: s, CurrentTrack: currentTrackURI}
@@ -485,6 +514,173 @@ func CreateHistoryList(items []spotify.RecentlyPlayedItem, s styles.Styles, curr
 
 	l := list.New(listItems, delegate, width, height)
 	l.Title = "Recently Played"
+	l.SetShowStatusBar(true)
+	l.SetFilteringEnabled(true)
+	l.Styles.Title = s.ListTitle
+	l.SetShowHelp(false)
+
+	return l
+}
+
+type ArtistTopTrackItem struct {
+	Track spotify.FullTrack
+	Index int
+}
+
+func (i ArtistTopTrackItem) Title() string {
+	if i.Track.Name == "" {
+		return "Unknown Track"
+	}
+	return i.Track.Name
+}
+
+func (i ArtistTopTrackItem) Description() string {
+	if i.Track.Album.Name == "" {
+		return "Unknown Album"
+	}
+	return i.Track.Album.Name
+}
+
+func (i ArtistTopTrackItem) FilterValue() string {
+	return i.Title() + " " + i.Description()
+}
+
+type ArtistTopTrackDelegate struct {
+	Styles       styles.Styles
+	CurrentTrack string
+}
+
+func (d ArtistTopTrackDelegate) Height() int                             { return 2 }
+func (d ArtistTopTrackDelegate) Spacing() int                            { return 0 }
+func (d ArtistTopTrackDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d ArtistTopTrackDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(ArtistTopTrackItem)
+	if !ok {
+		return
+	}
+
+	isPlaying := string(i.Track.URI) == d.CurrentTrack
+	isSelected := index == m.Index()
+
+	var titleStyle, descStyle lipgloss.Style
+
+	if isPlaying || isSelected {
+		titleStyle = d.Styles.ListItemActive
+	} else {
+		titleStyle = d.Styles.ListItem
+	}
+
+	descStyle = d.Styles.Muted
+
+	prefix := ""
+	if isPlaying {
+		prefix = "♫ "
+	} else if isSelected {
+		prefix = "▶ "
+	}
+
+	title := titleStyle.Render(prefix + i.Title())
+	desc := descStyle.Render("  󰀥 " + i.Description())
+
+	fmt.Fprint(w, title+"\n"+desc)
+}
+
+func CreateArtistTopTracksList(tracks []spotify.FullTrack, s styles.Styles, currentTrackURI string, width, height int) list.Model {
+	items := make([]list.Item, len(tracks))
+	for i, t := range tracks {
+		items[i] = ArtistTopTrackItem{Track: t, Index: i}
+	}
+
+	delegate := ArtistTopTrackDelegate{Styles: s, CurrentTrack: currentTrackURI}
+
+	l := list.New(items, delegate, width, height)
+	l.Title = "Top Tracks"
+	l.SetShowStatusBar(true)
+	l.SetFilteringEnabled(false)
+	l.Styles.Title = s.ListTitle
+	l.SetShowHelp(false)
+
+	return l
+}
+
+type ArtistAlbumItem struct {
+	Album spotify.SimpleAlbum
+}
+
+func (i ArtistAlbumItem) Title() string {
+	if i.Album.Name == "" {
+		return "Unknown Album"
+	}
+	return i.Album.Name
+}
+
+func (i ArtistAlbumItem) Description() string {
+	albumType := string(i.Album.AlbumType)
+	if albumType == "" {
+		albumType = "Album"
+	}
+	year := ""
+	if i.Album.ReleaseDate != "" && len(i.Album.ReleaseDate) >= 4 {
+		year = i.Album.ReleaseDate[:4]
+	}
+	if year != "" {
+		return albumType + " • " + year
+	}
+	return albumType
+}
+
+func (i ArtistAlbumItem) FilterValue() string {
+	return i.Album.Name
+}
+
+type ArtistAlbumDelegate struct {
+	Styles styles.Styles
+}
+
+func (d ArtistAlbumDelegate) Height() int                             { return 2 }
+func (d ArtistAlbumDelegate) Spacing() int                            { return 0 }
+func (d ArtistAlbumDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d ArtistAlbumDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(ArtistAlbumItem)
+	if !ok {
+		return
+	}
+
+	isSelected := index == m.Index()
+
+	var titleStyle, descStyle lipgloss.Style
+
+	if isSelected {
+		titleStyle = d.Styles.ListItemActive
+	} else {
+		titleStyle = d.Styles.ListItem
+	}
+
+	descStyle = d.Styles.Muted
+
+	prefix := ""
+	if isSelected {
+		prefix = "▶ "
+	}
+
+	title := titleStyle.Render(prefix + i.Title())
+	desc := descStyle.Render("  " + i.Description())
+
+	fmt.Fprint(w, title+"\n"+desc)
+}
+
+func CreateArtistAlbumsList(albums []spotify.SimpleAlbum, s styles.Styles, width, height int) list.Model {
+	items := make([]list.Item, len(albums))
+	for i, a := range albums {
+		items[i] = ArtistAlbumItem{Album: a}
+	}
+
+	delegate := ArtistAlbumDelegate{Styles: s}
+
+	l := list.New(items, delegate, width, height)
+	l.Title = "Albums"
 	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(true)
 	l.Styles.Title = s.ListTitle
