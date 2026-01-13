@@ -179,15 +179,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if listHeight < MinListHeight {
 			listHeight = MinListHeight
 		}
-		m.playlists.SetSize(listWidth, listHeight)
-		m.tracks.SetSize(listWidth, listHeight)
-		m.albumTracks.SetSize(listWidth, listHeight)
-		m.artistTopTracks.SetSize(listWidth, listHeight)
-		m.artistAlbums.SetSize(listWidth, listHeight)
-		m.devices.SetSize(listWidth, listHeight)
-		m.searchResults.SetSize(listWidth, listHeight)
-		m.historyTracks.SetSize(listWidth, listHeight)
-		m.addToPlaylistList.SetSize(listWidth, listHeight)
+		lists := []*list.Model{
+			&m.playlists, &m.tracks, &m.albumTracks,
+			&m.artistTopTracks, &m.artistAlbums, &m.devices,
+			&m.searchResults, &m.historyTracks, &m.addToPlaylistList,
+		}
+		for _, l := range lists {
+			if len(l.Items()) > 0 {
+				l.SetSize(listWidth, listHeight)
+			}
+		}
 		return m, nil
 
 	case spinner.TickMsg:
