@@ -70,7 +70,7 @@ func (d PlaylistDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 		title = d.Styles.ListItemActive.Render("▶ " + i.Title())
 		desc = d.Styles.Muted.Render("  " + i.Description())
 	} else {
-		title = d.Styles.ListItem.Render(i.Title())
+		title = d.Styles.ListItem.Render("  " + i.Title())
 		desc = d.Styles.Muted.Render("  " + i.Description())
 	}
 
@@ -106,7 +106,7 @@ func (d TrackDelegate) Render(w io.Writer, m list.Model, index int, listItem lis
 
 	descStyle = d.Styles.Muted
 
-	prefix := ""
+	prefix := "  "
 	if isPlaying {
 		prefix = "♫ "
 	} else if isSelected {
@@ -212,7 +212,7 @@ func (d AlbumTrackDelegate) Render(w io.Writer, m list.Model, index int, listIte
 
 	descStyle = d.Styles.Muted
 
-	prefix := ""
+	prefix := "  "
 	if isPlaying {
 		prefix = "♫ "
 	} else if isSelected {
@@ -573,7 +573,7 @@ func (d ArtistTopTrackDelegate) Render(w io.Writer, m list.Model, index int, lis
 
 	descStyle = d.Styles.Muted
 
-	prefix := ""
+	prefix := "  "
 	if isPlaying {
 		prefix = "♫ "
 	} else if isSelected {
@@ -660,7 +660,7 @@ func (d ArtistAlbumDelegate) Render(w io.Writer, m list.Model, index int, listIt
 
 	descStyle = d.Styles.Muted
 
-	prefix := ""
+	prefix := "  "
 	if isSelected {
 		prefix = "▶ "
 	}

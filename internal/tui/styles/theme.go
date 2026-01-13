@@ -98,7 +98,7 @@ func NewStyles(theme Theme) Styles {
 
 		ListItem: lipgloss.NewStyle().
 			Foreground(theme.Text).
-			PaddingLeft(2),
+			PaddingLeft(0),
 
 		ListItemActive: lipgloss.NewStyle().
 			Foreground(theme.Primary).
