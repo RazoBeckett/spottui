@@ -266,16 +266,28 @@ func (m Model) renderArtist() string {
 	)
 }
 
+const asciiLogo = `  /$$$$$$                        /$$  /$$$$$$$$ /$$   /$$ /$$$$$$
+ /$$__  $$                      | $$ |__  $$__/| $$  | $$|_  $$_/
+| $$  \__/  /$$$$$$   /$$$$$$  /$$$$$$  | $$   | $$  | $$  | $$  
+|  $$$$$$  /$$__  $$ /$$__  $$|_  $$_/  | $$   | $$  | $$  | $$  
+ \____  $$| $$  \ $$| $$  \ $$  | $$    | $$   | $$  | $$  | $$  
+ /$$  \ $$| $$  | $$| $$  | $$  | $$ /$$| $$   | $$  | $$  | $$  
+|  $$$$$$/| $$$$$$$/|  $$$$$$/  |  $$$$/| $$   |  $$$$$$/ /$$$$$$
+ \______/ | $$____/  \______/    \___/  |__/    \______/ |______/
+          | $$                                                   
+          | $$                                                   
+          |__/`
+
 func (m Model) renderHeader() string {
 	userName := "Spotify User"
 	if m.currentUser != nil && m.currentUser.DisplayName != "" {
 		userName = m.currentUser.DisplayName
 	}
 
-	title := m.styles.Header.Render("♫ SpotTUI")
-	user := m.styles.Muted.Render(" - " + userName)
+	logo := m.styles.Header.Render(asciiLogo)
+	user := m.styles.Muted.Render("Welcome, " + userName)
 
-	return title + user
+	return lipgloss.JoinVertical(lipgloss.Left, logo, user)
 }
 
 func (m Model) renderHelpBar() string {
