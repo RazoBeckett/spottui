@@ -36,6 +36,14 @@ type PlaybackStateMsg struct {
 // PollPlaybackMsg triggers a playback state refresh
 type PollPlaybackMsg struct{}
 
+type ShuffleToggledMsg struct {
+	NewState bool
+}
+
+type RepeatCycledMsg struct {
+	NewState string
+}
+
 type DevicesLoadedMsg struct {
 	Devices []spotify.PlayerDevice
 }
@@ -360,8 +368,12 @@ func (m Model) toggleShuffle() tea.Cmd {
 			return nil
 		}
 
-		m.client.Shuffle(ctx, !state.ShuffleState)
-		return PollPlaybackMsg{}
+		newState := !state.ShuffleState
+		err = m.client.Shuffle(ctx, newState)
+		if err != nil {
+			return PollPlaybackMsg{}
+		}
+		return ShuffleToggledMsg{NewState: newState}
 	}
 }
 
@@ -373,7 +385,6 @@ func (m Model) cycleRepeat() tea.Cmd {
 			return nil
 		}
 
-		// Cycle: off -> context -> track -> off
 		var newState string
 		switch state.RepeatState {
 		case "off":
@@ -384,8 +395,11 @@ func (m Model) cycleRepeat() tea.Cmd {
 			newState = "off"
 		}
 
-		m.client.Repeat(ctx, newState)
-		return PollPlaybackMsg{}
+		err = m.client.Repeat(ctx, newState)
+		if err != nil {
+			return PollPlaybackMsg{}
+		}
+		return RepeatCycledMsg{NewState: newState}
 	}
 }
 

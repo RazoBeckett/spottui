@@ -334,6 +334,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case ShuffleToggledMsg:
+		if m.playbackState != nil {
+			m.playbackState.ShuffleState = msg.NewState
+		}
+		return m, nil
+
+	case RepeatCycledMsg:
+		if m.playbackState != nil {
+			m.playbackState.RepeatState = msg.NewState
+		}
+		return m, nil
+
 	case LyricsLoadedMsg:
 		m.fetching = false
 		m.fetchingLyrics = false
