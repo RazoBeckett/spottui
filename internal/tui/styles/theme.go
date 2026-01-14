@@ -64,10 +64,11 @@ type Styles struct {
 	DialogButton lipgloss.Style
 
 	// Misc
-	Error   lipgloss.Style
-	Success lipgloss.Style
-	Spinner lipgloss.Style
-	Muted   lipgloss.Style
+	Error      lipgloss.Style
+	Success    lipgloss.Style
+	Spinner    lipgloss.Style
+	Muted      lipgloss.Style
+	ActiveIcon lipgloss.Style
 }
 
 // NewStyles creates styled components from a theme
@@ -161,6 +162,9 @@ func NewStyles(theme Theme) Styles {
 
 		Muted: lipgloss.NewStyle().
 			Foreground(theme.TextMuted),
+
+		ActiveIcon: lipgloss.NewStyle().
+			Foreground(theme.Primary),
 	}
 }
 

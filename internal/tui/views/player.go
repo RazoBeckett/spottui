@@ -29,17 +29,21 @@ func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) st
 		playIcon = ""
 	}
 
-	shuffleIcon := ""
+	var shuffleIcon string
 	if state.ShuffleState {
-		shuffleIcon = "  "
+		shuffleIcon = s.ActiveIcon.Render("⤮")
+	} else {
+		shuffleIcon = s.Muted.Render("⤮")
 	}
 
-	repeatIcon := ""
+	var repeatIcon string
 	switch state.RepeatState {
 	case "context":
-		repeatIcon = "  "
+		repeatIcon = s.ActiveIcon.Render("⟳")
 	case "track":
-		repeatIcon = "  "
+		repeatIcon = s.ActiveIcon.Render("⟳₁")
+	default:
+		repeatIcon = s.Muted.Render("⟳")
 	}
 
 	volumeStr := fmt.Sprintf(" %d%%", state.Device.Volume)
@@ -56,16 +60,18 @@ func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) st
 	title := s.TrackTitle.Render(track.Name)
 	artist := s.TrackArtist.Render(artistStr)
 
-	leftContent := lipgloss.JoinHorizontal(lipgloss.Center,
-		playIcon, " ", title, " - ", artist, shuffleIcon, repeatIcon,
-	)
+	rightContent := shuffleIcon + " " + repeatIcon + " " + s.Muted.Render(volumeStr)
+	rightWidth := lipgloss.Width(rightContent)
 
+	leftContent := lipgloss.JoinHorizontal(lipgloss.Center,
+		playIcon, " ", title, " - ", artist,
+	)
 	leftWidth := lipgloss.Width(leftContent)
-	volumeWidth := lipgloss.Width(volumeStr)
-	spacerWidth := max(availableWidth-leftWidth-volumeWidth, 1)
+
+	spacerWidth := max(availableWidth-leftWidth-rightWidth, 1)
 	spacer := strings.Repeat(" ", spacerWidth)
 
-	line1 := leftContent + spacer + s.Muted.Render(volumeStr)
+	line1 := leftContent + spacer + rightContent
 
 	timeDisplay := s.PlaybackTime.Render(timeStr)
 	timeWidth := lipgloss.Width(timeDisplay)
