@@ -2,6 +2,14 @@
 
 ## Recently Completed (Jan 14, 2026)
 
+- [x] **Error retry logic with exponential backoff** - @razobeckett
+  - Created `retry.go` with generic `withRetry[T]` function
+  - Exponential backoff: 500ms base, 2x factor, 5s max, 3 retries
+  - Retries on: rate limits, 5xx errors, timeouts, connection issues
+  - Added `friendlyError()` for user-friendly error messages
+  - Wrapped all data fetching functions: initial data, playlists, tracks, albums, search, history, artist
+  - Files: `internal/tui/retry.go`, `internal/tui/commands.go`
+
 - [x] **Optimistic UI updates for shuffle/repeat** - @razobeckett
   - Added `ShuffleToggledMsg` and `RepeatCycledMsg` message types
   - UI updates instantly on toggle, falls back to polling on API failure
@@ -117,7 +125,7 @@ _None currently_
 
 ### Polish
 - [x] ~~Responsive layout - Better handling of small terminal sizes~~ (completed Jan 13, 2026)
-- [ ] Error retry logic - Automatic retry with exponential backoff
+- [x] ~~Error retry logic - Automatic retry with exponential backoff~~ (completed Jan 14, 2026)
 - [x] ~~Loading skeletons - Placeholder UI while content loads~~ (completed Jan 14, 2026)
 
 ### Tech Debt

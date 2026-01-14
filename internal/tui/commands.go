@@ -97,9 +97,11 @@ func (m Model) fetchInitialData() tea.Cmd {
 		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
 		defer cancel()
 
-		user, err := m.client.CurrentUser(ctx)
+		user, err := withRetry(ctx, func() (*spotify.PrivateUser, error) {
+			return m.client.CurrentUser(ctx)
+		})
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
 		var allPlaylists []spotify.SimplePlaylist
@@ -107,10 +109,12 @@ func (m Model) fetchInitialData() tea.Cmd {
 		offset := 0
 
 		for {
-			playlists, err := m.client.CurrentUsersPlaylists(ctx,
-				spotify.Limit(limit), spotify.Offset(offset))
+			playlists, err := withRetry(ctx, func() (*spotify.SimplePlaylistPage, error) {
+				return m.client.CurrentUsersPlaylists(ctx,
+					spotify.Limit(limit), spotify.Offset(offset))
+			})
 			if err != nil {
-				return ErrMsg{Err: err}
+				return ErrMsg{Err: friendlyError(err)}
 			}
 
 			allPlaylists = append(allPlaylists, playlists.Playlists...)
@@ -149,10 +153,12 @@ func (m Model) fetchTracks(playlistID spotify.ID) tea.Cmd {
 		offset := 0
 
 		for {
-			tracks, err := m.client.GetPlaylistTracks(ctx, playlistID,
-				spotify.Limit(limit), spotify.Offset(offset))
+			tracks, err := withRetry(ctx, func() (*spotify.PlaylistTrackPage, error) {
+				return m.client.GetPlaylistTracks(ctx, playlistID,
+					spotify.Limit(limit), spotify.Offset(offset))
+			})
 			if err != nil {
-				return ErrMsg{Err: err}
+				return ErrMsg{Err: friendlyError(err)}
 			}
 
 			allTracks = append(allTracks, tracks.Tracks...)
@@ -178,10 +184,12 @@ func (m Model) fetchLikedTracks() tea.Cmd {
 		offset := 0
 
 		for {
-			saved, err := m.client.CurrentUsersTracks(ctx,
-				spotify.Limit(limit), spotify.Offset(offset))
+			saved, err := withRetry(ctx, func() (*spotify.SavedTrackPage, error) {
+				return m.client.CurrentUsersTracks(ctx,
+					spotify.Limit(limit), spotify.Offset(offset))
+			})
 			if err != nil {
-				return ErrMsg{Err: err}
+				return ErrMsg{Err: friendlyError(err)}
 			}
 
 			for _, s := range saved.Tracks {
@@ -214,10 +222,12 @@ func (m Model) fetchAlbumTracks(albumID spotify.ID) tea.Cmd {
 		offset := 0
 
 		for {
-			tracks, err := m.client.GetAlbumTracks(ctx, albumID,
-				spotify.Limit(limit), spotify.Offset(offset))
+			tracks, err := withRetry(ctx, func() (*spotify.SimpleTrackPage, error) {
+				return m.client.GetAlbumTracks(ctx, albumID,
+					spotify.Limit(limit), spotify.Offset(offset))
+			})
 			if err != nil {
-				return ErrMsg{Err: err}
+				return ErrMsg{Err: friendlyError(err)}
 			}
 
 			allTracks = append(allTracks, tracks.Tracks...)
@@ -476,9 +486,11 @@ func (m Model) fetchDevices() tea.Cmd {
 		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
 		defer cancel()
 
-		devices, err := m.client.PlayerDevices(ctx)
+		devices, err := withRetry(ctx, func() ([]spotify.PlayerDevice, error) {
+			return m.client.PlayerDevices(ctx)
+		})
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
 		return DevicesLoadedMsg{Devices: devices}
@@ -516,9 +528,11 @@ func (m Model) searchTracks(query string) tea.Cmd {
 		defer cancel()
 
 		searchTypes := spotify.SearchTypeTrack | spotify.SearchTypeAlbum | spotify.SearchTypePlaylist | spotify.SearchTypeArtist
-		result, err := m.client.Search(ctx, query, searchTypes, spotify.Limit(20))
+		result, err := withRetry(ctx, func() (*spotify.SearchResult, error) {
+			return m.client.Search(ctx, query, searchTypes, spotify.Limit(20))
+		})
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
 		msg := SearchResultsMsg{}
@@ -645,9 +659,11 @@ func (m Model) fetchRecentlyPlayed() tea.Cmd {
 		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
 		defer cancel()
 
-		items, err := m.client.PlayerRecentlyPlayed(ctx)
+		items, err := withRetry(ctx, func() ([]spotify.RecentlyPlayedItem, error) {
+			return m.client.PlayerRecentlyPlayed(ctx)
+		})
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
 		return HistoryLoadedMsg{Items: items}
@@ -706,14 +722,18 @@ func (m Model) fetchArtist(artistID spotify.ID) tea.Cmd {
 		ctx, cancel := context.WithTimeout(m.ctx, 15*time.Second)
 		defer cancel()
 
-		artist, err := m.client.GetArtist(ctx, artistID)
+		artist, err := withRetry(ctx, func() (*spotify.FullArtist, error) {
+			return m.client.GetArtist(ctx, artistID)
+		})
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
-		topTracks, err := m.client.GetArtistsTopTracks(ctx, artistID, "US")
+		topTracks, err := withRetry(ctx, func() ([]spotify.FullTrack, error) {
+			return m.client.GetArtistsTopTracks(ctx, artistID, "US")
+		})
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
 		var allAlbums []spotify.SimpleAlbum
@@ -721,11 +741,13 @@ func (m Model) fetchArtist(artistID spotify.ID) tea.Cmd {
 		offset := 0
 
 		for {
-			albums, err := m.client.GetArtistAlbums(ctx, artistID,
-				[]spotify.AlbumType{spotify.AlbumTypeAlbum, spotify.AlbumTypeSingle},
-				spotify.Limit(limit), spotify.Offset(offset))
+			albums, err := withRetry(ctx, func() (*spotify.SimpleAlbumPage, error) {
+				return m.client.GetArtistAlbums(ctx, artistID,
+					[]spotify.AlbumType{spotify.AlbumTypeAlbum, spotify.AlbumTypeSingle},
+					spotify.Limit(limit), spotify.Offset(offset))
+			})
 			if err != nil {
-				return ErrMsg{Err: err}
+				return ErrMsg{Err: friendlyError(err)}
 			}
 
 			allAlbums = append(allAlbums, albums.Albums...)

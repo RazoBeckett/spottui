@@ -8,15 +8,15 @@
 - **Files affected**: All packages
 - **Effort**: Medium
 
-### Error Handling
-- **Priority**: Medium
-- **Description**: API errors show generic messages. Could benefit from more user-friendly error messages and retry logic.
-- **Files affected**: `internal/tui/commands.go`
-- **Effort**: Low
-
 ---
 
 ## Resolved
+
+### Error Handling (Jan 14, 2026)
+- **Priority**: Medium
+- **Description**: API errors showed generic messages. Needed user-friendly error messages and retry logic.
+- **Resolution**: Created `retry.go` with `withRetry[T]` generic function (exponential backoff) and `friendlyError()` for user-friendly messages. Wrapped all data fetching operations.
+- **Files**: `internal/tui/retry.go`, `internal/tui/commands.go`
 
 ### Hardcoded Dimensions (Jan 13, 2026)
 - **Priority**: Low
