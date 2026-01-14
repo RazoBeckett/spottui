@@ -46,7 +46,7 @@ func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) st
 		repeatIcon = s.Muted.Render("⟳")
 	}
 
-	volumeStr := fmt.Sprintf(" %d%%", state.Device.Volume)
+	volumeStr := fmt.Sprintf("   %d%%", state.Device.Volume)
 
 	availableWidth := max(width-8, 30)
 	progressWidth := max(availableWidth-14, 10)
