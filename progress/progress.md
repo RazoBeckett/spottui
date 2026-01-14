@@ -2,6 +2,20 @@
 
 ## Recently Completed (Jan 14, 2026)
 
+- [x] **Test coverage improvements** - @razobeckett
+  - Added comprehensive tests for model.go, commands.go, handlers.go
+  - Added tests for auth/token.go edge cases
+  - Coverage improvements:
+    - `tui`: 7.5% → 43.9%
+    - `views`: 9.1% → 56.7%
+    - `auth`: 20.8% → 23.6%
+    - `styles`: 100% (maintained)
+  - Test files added/modified:
+    - `internal/tui/model_test.go` (NEW)
+    - `internal/tui/commands_test.go` (NEW)
+    - `internal/tui/handlers_test.go` (NEW)
+    - `internal/auth/token_test.go` (expanded)
+
 - [x] **Error retry logic with exponential backoff** - @razobeckett
   - Created `retry.go` with generic `withRetry[T]` function
   - Exponential backoff: 500ms base, 2x factor, 5s max, 3 retries
