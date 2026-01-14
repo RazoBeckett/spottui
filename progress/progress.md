@@ -2,6 +2,20 @@
 
 ## Recently Completed (Jan 14, 2026)
 
+- [x] **Optimistic UI updates for shuffle/repeat** - @razobeckett
+  - Added `ShuffleToggledMsg` and `RepeatCycledMsg` message types
+  - UI updates instantly on toggle, falls back to polling on API failure
+  - Eliminates delay when toggling shuffle/repeat modes
+  - Files: `internal/tui/commands.go`, `internal/tui/model.go`
+  - Commit: `48e9eef`
+
+- [x] **Move shuffle/repeat icons to right side** - @razobeckett
+  - Icons now display before volume percentage, always aligned
+  - Added `ActiveIcon` style (green when active, muted when inactive)
+  - Changed to Unicode symbols (⤮ for shuffle, ⟳ for repeat) for compatibility
+  - Files: `internal/tui/views/player.go`, `internal/tui/styles/theme.go`
+  - Commit: `7cd9850`
+
 - [x] **Loading skeletons - layout fix** - @razobeckett
   - Fixed nil pointer panic: clear data slices instead of uninitialized list items
   - Added titles to skeleton views for consistent layout (playlist name, album name, etc.)
