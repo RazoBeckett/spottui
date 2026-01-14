@@ -3,7 +3,10 @@ package views
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/zmb3/spotify/v2"
+
+	"github.com/razobeckett/spottui/internal/tui/styles"
 )
 
 func TestPlaylistItem(t *testing.T) {
@@ -16,33 +19,17 @@ func TestPlaylistItem(t *testing.T) {
 		},
 	}
 
-	if item.Title() != "Test Playlist" {
-		t.Errorf("Title() = %q, want %q", item.Title(), "Test Playlist")
-	}
-
-	if item.Description() != "42 tracks" {
-		t.Errorf("Description() = %q, want %q", item.Description(), "42 tracks")
-	}
-
-	if item.FilterValue() != "Test Playlist" {
-		t.Errorf("FilterValue() = %q, want %q", item.FilterValue(), "Test Playlist")
-	}
+	assert.Equal(t, "Test Playlist", item.Title())
+	assert.Equal(t, "42 tracks", item.Description())
+	assert.Equal(t, "Test Playlist", item.FilterValue())
 }
 
 func TestLikedSongsItem(t *testing.T) {
 	item := LikedSongsItem{Total: 100}
 
-	if item.Title() != "Liked Songs" {
-		t.Errorf("Title() = %q, want %q", item.Title(), "Liked Songs")
-	}
-
-	if item.Description() != "100 tracks" {
-		t.Errorf("Description() = %q, want %q", item.Description(), "100 tracks")
-	}
-
-	if item.FilterValue() != "Liked Songs" {
-		t.Errorf("FilterValue() = %q, want %q", item.FilterValue(), "Liked Songs")
-	}
+	assert.Equal(t, "Liked Songs", item.Title())
+	assert.Equal(t, "100 tracks", item.Description())
+	assert.Equal(t, "Liked Songs", item.FilterValue())
 }
 
 func TestTrackItem(t *testing.T) {
@@ -61,34 +48,21 @@ func TestTrackItem(t *testing.T) {
 		Index: 0,
 	}
 
-	if item.Title() != "Test Song" {
-		t.Errorf("Title() = %q, want %q", item.Title(), "Test Song")
-	}
-
-	if item.Description() != "Artist 1, Artist 2" {
-		t.Errorf("Description() = %q, want %q", item.Description(), "Artist 1, Artist 2")
-	}
-
-	expectedFilter := "Test Song Artist 1, Artist 2"
-	if item.FilterValue() != expectedFilter {
-		t.Errorf("FilterValue() = %q, want %q", item.FilterValue(), expectedFilter)
-	}
+	assert.Equal(t, "Test Song", item.Title())
+	assert.Equal(t, "Artist 1, Artist 2", item.Description())
+	assert.Equal(t, "Test Song Artist 1, Artist 2", item.FilterValue())
 }
 
 func TestTrackItemEmptyName(t *testing.T) {
 	item := TrackItem{
 		Track: spotify.PlaylistTrack{
 			Track: spotify.FullTrack{
-				SimpleTrack: spotify.SimpleTrack{
-					Name: "",
-				},
+				SimpleTrack: spotify.SimpleTrack{Name: ""},
 			},
 		},
 	}
 
-	if item.Title() != "Unknown Track" {
-		t.Errorf("Title() = %q, want %q", item.Title(), "Unknown Track")
-	}
+	assert.Equal(t, "Unknown Track", item.Title())
 }
 
 func TestTrackItemNoArtists(t *testing.T) {
@@ -103,50 +77,103 @@ func TestTrackItemNoArtists(t *testing.T) {
 		},
 	}
 
-	if item.Description() != "Unknown Artist" {
-		t.Errorf("Description() = %q, want %q", item.Description(), "Unknown Artist")
-	}
+	assert.Equal(t, "Unknown Artist", item.Description())
 }
 
 func TestAlbumTrackItem(t *testing.T) {
 	item := AlbumTrackItem{
 		Track: spotify.SimpleTrack{
-			Name: "Album Track",
-			Artists: []spotify.SimpleArtist{
-				{Name: "Album Artist"},
-			},
+			Name:    "Album Track",
+			Artists: []spotify.SimpleArtist{{Name: "Album Artist"}},
 		},
 		Index: 5,
 	}
 
-	if item.Title() != "Album Track" {
-		t.Errorf("Title() = %q, want %q", item.Title(), "Album Track")
-	}
-
-	if item.Description() != "Album Artist" {
-		t.Errorf("Description() = %q, want %q", item.Description(), "Album Artist")
-	}
+	assert.Equal(t, "Album Track", item.Title())
+	assert.Equal(t, "Album Artist", item.Description())
+	assert.Equal(t, "Album Track Album Artist", item.FilterValue())
 }
 
-func TestSearchItem(t *testing.T) {
+func TestAlbumTrackItem_EmptyName(t *testing.T) {
+	item := AlbumTrackItem{Track: spotify.SimpleTrack{Name: ""}}
+	assert.Equal(t, "Unknown Track", item.Title())
+}
+
+func TestAlbumTrackItem_NoArtists(t *testing.T) {
+	item := AlbumTrackItem{Track: spotify.SimpleTrack{Name: "Track", Artists: []spotify.SimpleArtist{}}}
+	assert.Equal(t, "Unknown Artist", item.Description())
+}
+
+func TestSearchItem_Track(t *testing.T) {
 	track := &spotify.FullTrack{
 		SimpleTrack: spotify.SimpleTrack{
-			Name: "Search Track",
+			Name:    "Search Track",
+			URI:     "spotify:track:123",
+			Artists: []spotify.SimpleArtist{{Name: "Artist"}},
 		},
 	}
-	item := SearchItem{
-		Type:  SearchResultTrack,
-		Track: track,
-	}
+	item := SearchItem{Type: SearchResultTrack, Track: track}
 
-	if item.Title() != "Search Track" {
-		t.Errorf("Title() = %q, want %q", item.Title(), "Search Track")
-	}
+	assert.Equal(t, "Search Track", item.Title())
+	assert.Contains(t, item.Description(), "Song")
+	assert.Equal(t, "spotify:track:123", item.URI())
+}
 
-	expectedFilter := "Search Track Unknown Artist • Song"
-	if item.FilterValue() != expectedFilter {
-		t.Errorf("FilterValue() = %q, want %q", item.FilterValue(), expectedFilter)
+func TestSearchItem_Album(t *testing.T) {
+	album := &spotify.SimpleAlbum{
+		Name:    "Test Album",
+		URI:     "spotify:album:456",
+		Artists: []spotify.SimpleArtist{{Name: "Album Artist"}},
 	}
+	item := SearchItem{Type: SearchResultAlbum, Album: album}
+
+	assert.Equal(t, "Test Album", item.Title())
+	assert.Contains(t, item.Description(), "Album")
+	assert.Equal(t, "spotify:album:456", item.URI())
+}
+
+func TestSearchItem_Playlist(t *testing.T) {
+	playlist := &spotify.SimplePlaylist{
+		Name:  "Test Playlist",
+		URI:   "spotify:playlist:789",
+		Owner: spotify.User{DisplayName: "Owner Name"},
+	}
+	item := SearchItem{Type: SearchResultPlaylist, Playlist: playlist}
+
+	assert.Equal(t, "Test Playlist", item.Title())
+	assert.Contains(t, item.Description(), "Playlist")
+	assert.Contains(t, item.Description(), "Owner Name")
+	assert.Equal(t, "spotify:playlist:789", item.URI())
+}
+
+func TestSearchItem_Artist(t *testing.T) {
+	artist := &spotify.FullArtist{
+		SimpleArtist: spotify.SimpleArtist{
+			Name: "Test Artist",
+			URI:  "spotify:artist:abc",
+		},
+		Followers: spotify.Followers{Count: 1500000},
+	}
+	item := SearchItem{Type: SearchResultArtist, Artist: artist}
+
+	assert.Equal(t, "Test Artist", item.Title())
+	assert.Contains(t, item.Description(), "Artist")
+	assert.Contains(t, item.Description(), "1.5M")
+	assert.Equal(t, "spotify:artist:abc", item.URI())
+}
+
+func TestSearchItem_EmptyNames(t *testing.T) {
+	trackItem := SearchItem{Type: SearchResultTrack, Track: &spotify.FullTrack{}}
+	assert.Equal(t, "Unknown Track", trackItem.Title())
+
+	albumItem := SearchItem{Type: SearchResultAlbum, Album: &spotify.SimpleAlbum{}}
+	assert.Equal(t, "Unknown Album", albumItem.Title())
+
+	playlistItem := SearchItem{Type: SearchResultPlaylist, Playlist: &spotify.SimplePlaylist{}}
+	assert.Equal(t, "Unknown Playlist", playlistItem.Title())
+
+	artistItem := SearchItem{Type: SearchResultArtist, Artist: &spotify.FullArtist{}}
+	assert.Equal(t, "Unknown Artist", artistItem.Title())
 }
 
 func TestDeviceItem(t *testing.T) {
@@ -158,13 +185,9 @@ func TestDeviceItem(t *testing.T) {
 		},
 	}
 
-	if item.Title() != "My Speaker (active)" {
-		t.Errorf("Title() = %q, want %q", item.Title(), "My Speaker (active)")
-	}
-
-	if item.Description() != "Speaker" {
-		t.Errorf("Description() = %q, want %q", item.Description(), "Speaker")
-	}
+	assert.Equal(t, "My Speaker (active)", item.Title())
+	assert.Equal(t, "Speaker", item.Description())
+	assert.Equal(t, "My Speaker", item.FilterValue())
 }
 
 func TestDeviceItemInactive(t *testing.T) {
@@ -176,7 +199,182 @@ func TestDeviceItemInactive(t *testing.T) {
 		},
 	}
 
-	if item.Title() != "My Speaker" {
-		t.Errorf("Title() = %q, want %q", item.Title(), "My Speaker")
+	assert.Equal(t, "My Speaker", item.Title())
+}
+
+func TestArtistTopTrackItem(t *testing.T) {
+	item := ArtistTopTrackItem{
+		Track: spotify.FullTrack{
+			SimpleTrack: spotify.SimpleTrack{Name: "Hit Song"},
+			Album:       spotify.SimpleAlbum{Name: "Greatest Hits"},
+		},
+		Index: 0,
 	}
+
+	assert.Equal(t, "Hit Song", item.Title())
+	assert.Equal(t, "Greatest Hits", item.Description())
+	assert.Equal(t, "Hit Song Greatest Hits", item.FilterValue())
+}
+
+func TestArtistTopTrackItem_Empty(t *testing.T) {
+	item := ArtistTopTrackItem{Track: spotify.FullTrack{}}
+	assert.Equal(t, "Unknown Track", item.Title())
+	assert.Equal(t, "Unknown Album", item.Description())
+}
+
+func TestArtistAlbumItem(t *testing.T) {
+	item := ArtistAlbumItem{
+		Album: spotify.SimpleAlbum{
+			Name:        "Album Name",
+			AlbumType:   "album",
+			ReleaseDate: "2023-05-15",
+		},
+	}
+
+	assert.Equal(t, "Album Name", item.Title())
+	assert.Contains(t, item.Description(), "album")
+	assert.Contains(t, item.Description(), "2023")
+	assert.Equal(t, "Album Name", item.FilterValue())
+}
+
+func TestArtistAlbumItem_Empty(t *testing.T) {
+	item := ArtistAlbumItem{Album: spotify.SimpleAlbum{}}
+	assert.Equal(t, "Unknown Album", item.Title())
+}
+
+func TestArtistAlbumItem_NoYear(t *testing.T) {
+	item := ArtistAlbumItem{
+		Album: spotify.SimpleAlbum{
+			Name:      "Album",
+			AlbumType: "single",
+		},
+	}
+	assert.Equal(t, "single", item.Description())
+}
+
+func TestFormatFollowers(t *testing.T) {
+	tests := []struct {
+		count    spotify.Numeric
+		expected string
+	}{
+		{500, "500"},
+		{1500, "1.5K"},
+		{10000, "10.0K"},
+		{1500000, "1.5M"},
+		{10000000, "10.0M"},
+	}
+
+	for _, tt := range tests {
+		result := formatFollowers(tt.count)
+		assert.Equal(t, tt.expected, result)
+	}
+}
+
+func TestArtistNames(t *testing.T) {
+	artists := []spotify.SimpleArtist{
+		{Name: "Artist A"},
+		{Name: "Artist B"},
+	}
+	result := artistNames(artists)
+	assert.Equal(t, "Artist A, Artist B", result)
+
+	result = artistNames([]spotify.SimpleArtist{})
+	assert.Equal(t, "Unknown Artist", result)
+}
+
+func TestCreatePlaylistList(t *testing.T) {
+	s := styles.DefaultStyles()
+	playlists := []spotify.SimplePlaylist{
+		{Name: "Playlist 1", Tracks: spotify.PlaylistTracks{Total: 10}},
+		{Name: "Playlist 2", Tracks: spotify.PlaylistTracks{Total: 20}},
+	}
+
+	l := CreatePlaylistList(playlists, 50, s, 80, 20)
+
+	assert.Equal(t, "Your Playlists", l.Title)
+	assert.Equal(t, 3, len(l.Items()))
+}
+
+func TestCreateTrackList(t *testing.T) {
+	s := styles.DefaultStyles()
+	tracks := []spotify.PlaylistTrack{
+		{Track: spotify.FullTrack{SimpleTrack: spotify.SimpleTrack{Name: "Track 1"}}},
+		{Track: spotify.FullTrack{SimpleTrack: spotify.SimpleTrack{Name: "Track 2"}}},
+	}
+
+	l := CreateTrackList(tracks, s, "", 80, 20)
+
+	assert.Equal(t, "Tracks", l.Title)
+	assert.Equal(t, 2, len(l.Items()))
+}
+
+func TestCreateDeviceList(t *testing.T) {
+	s := styles.DefaultStyles()
+	devices := []spotify.PlayerDevice{
+		{Name: "Device 1", Type: "Computer"},
+		{Name: "Device 2", Type: "Smartphone"},
+	}
+
+	l := CreateDeviceList(devices, s, 80, 20)
+
+	assert.Equal(t, "Select Device", l.Title)
+	assert.Equal(t, 2, len(l.Items()))
+}
+
+func TestCreateSearchResultsList(t *testing.T) {
+	s := styles.DefaultStyles()
+	tracks := []spotify.FullTrack{{SimpleTrack: spotify.SimpleTrack{Name: "Track"}}}
+	albums := []spotify.SimpleAlbum{{Name: "Album"}}
+	playlists := []spotify.SimplePlaylist{{Name: "Playlist"}}
+	artists := []spotify.FullArtist{{SimpleArtist: spotify.SimpleArtist{Name: "Artist"}}}
+
+	l := CreateSearchResultsList(tracks, albums, playlists, artists, s, "", 80, 20)
+
+	assert.Equal(t, "Search Results", l.Title)
+	assert.Equal(t, 4, len(l.Items()))
+}
+
+func TestCreateHistoryList(t *testing.T) {
+	s := styles.DefaultStyles()
+	items := []spotify.RecentlyPlayedItem{
+		{Track: spotify.SimpleTrack{Name: "Recent 1"}},
+		{Track: spotify.SimpleTrack{Name: "Recent 2"}},
+	}
+
+	l := CreateHistoryList(items, s, "", 80, 20)
+
+	assert.Equal(t, "Recently Played", l.Title)
+	assert.Equal(t, 2, len(l.Items()))
+}
+
+func TestDelegateHeightAndSpacing(t *testing.T) {
+	s := styles.DefaultStyles()
+
+	pd := PlaylistDelegate{Styles: s}
+	assert.Equal(t, 2, pd.Height())
+	assert.Equal(t, 0, pd.Spacing())
+
+	td := TrackDelegate{Styles: s}
+	assert.Equal(t, 2, td.Height())
+	assert.Equal(t, 0, td.Spacing())
+
+	dd := DeviceDelegate{Styles: s}
+	assert.Equal(t, 2, dd.Height())
+	assert.Equal(t, 0, dd.Spacing())
+
+	atd := AlbumTrackDelegate{Styles: s}
+	assert.Equal(t, 2, atd.Height())
+	assert.Equal(t, 0, atd.Spacing())
+
+	sid := SearchItemDelegate{Styles: s}
+	assert.Equal(t, 2, sid.Height())
+	assert.Equal(t, 0, sid.Spacing())
+
+	attd := ArtistTopTrackDelegate{Styles: s}
+	assert.Equal(t, 2, attd.Height())
+	assert.Equal(t, 0, attd.Spacing())
+
+	aad := ArtistAlbumDelegate{Styles: s}
+	assert.Equal(t, 2, aad.Height())
+	assert.Equal(t, 0, aad.Spacing())
 }
