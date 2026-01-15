@@ -243,6 +243,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			delegate := views.TrackDelegate{Styles: m.styles, CurrentTrack: currentTrack}
 			m.tracks.SetDelegate(delegate)
 		}
+		if m.view == ViewLyrics && m.playbackState != nil && m.playbackState.Item != nil && !m.fetchingLyrics {
+			newTrackName := m.playbackState.Item.Name
+			newArtistName := ""
+			if len(m.playbackState.Item.Artists) > 0 {
+				newArtistName = m.playbackState.Item.Artists[0].Name
+			}
+			if newTrackName != m.lyricsTrackName || newArtistName != m.lyricsArtistName {
+				m.fetchingLyrics = true
+				m.fetching = true
+				return m, tea.Batch(m.fetchLyrics(newTrackName, newArtistName), m.scheduleFetchingTick())
+			}
+		}
 		return m, nil
 
 	case ProgressTickMsg:

@@ -432,6 +432,22 @@ func (m Model) renderLyrics() string {
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
 
+	if m.fetching {
+		dots := strings.Repeat(".", m.fetchingDots+1)
+		msg := m.styles.Muted.Render("fetching" + dots)
+		contentHeight := m.height - playerHeight - helpHeight
+		centeredContent := lipgloss.Place(
+			m.width, contentHeight,
+			lipgloss.Center, lipgloss.Center,
+			msg,
+		)
+		return lipgloss.JoinVertical(lipgloss.Left,
+			centeredContent,
+			player,
+			help,
+		)
+	}
+
 	noLyricsAvailable := m.lyricsData == "" && len(m.lyricsSynced) == 0
 	if noLyricsAvailable {
 		noLyrics := m.styles.Muted.Render("No lyrics available for this track")
