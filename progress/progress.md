@@ -1,5 +1,15 @@
 # SpotTUI Progress Tracker
 
+## Recently Completed (Jan 15, 2026)
+
+- [x] **Auto-fetch lyrics on track change** - @razobeckett
+  - Lyrics view now detects when track changes (via next/prev or external control)
+  - Compares current playback track with displayed lyrics track/artist
+  - Automatically fetches new lyrics when mismatch detected
+  - Shows "fetching..." indicator centered above player while loading
+  - Files: `internal/tui/model.go`, `internal/tui/render.go`
+  - Commit: `7889f5e`
+
 ## Recently Completed (Jan 14, 2026)
 
 - [x] **Test coverage improvements** - @razobeckett
