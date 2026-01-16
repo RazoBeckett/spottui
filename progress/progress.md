@@ -8,6 +8,7 @@
   - Supports all configurable settings: Spotify credentials, cache TTLs, retry params, UI theme, layout, playback
   - Environment variable override: `SPOTIFY_CLIENT`, `SPOTIFY_CALLBACK`
   - JSON file format with sensible defaults for all settings
+  - Custom Duration type for human-readable duration strings ("5m", "10s")
   - Created `internal/config/config_test.go` with 8 test cases
   - Updated `main.go` to use new config system
   - Updated `model.go` to embed config and pass to cache
@@ -16,6 +17,15 @@
   - Created `config.example.json` for user reference
   - Updated `.env.example` to document new config approach
   - All tests pass: `go test ./...` (6 packages, all passing)
+  - Commit: `3dbeec4`
+
+- [x] **README documentation update** - @razobeckett
+  - Updated setup section with config file instructions
+  - Added comprehensive Configuration section with all options documented
+  - Added Configuration to "How It Works" section
+  - Updated Project Structure to include config package
+  - Renamed Token Storage to "Token & Configuration Storage"
+  - Documented environment variable overrides
 
 ## Recently Completed (Jan 15, 2026)
 

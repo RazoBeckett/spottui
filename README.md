@@ -39,20 +39,33 @@ A beautiful terminal-based Spotify client built with Go, using the Charmbracelet
 3. Add `http://localhost:8080/callback` as a Redirect URI in your app settings
 4. Copy your **Client ID** (you don't need the client secret for PKCE flow)
 
-### 2. Configure Environment
+### 2. Configure SpotTUI
 
-Create a `.env` file in the project root:
+SpotTUI uses a configuration file at `~/.config/spottui/config.json` (following the XDG Base Directory Specification).
+
+**Option A: Create config file**
+
+```bash
+mkdir -p ~/.config/spottui
+cp config.example.json ~/.config/spottui/config.json
+```
+
+Edit the config file and add your Client ID:
+
+```json
+{
+  "client_id": "your_client_id_here"
+}
+```
+
+**Option B: Use environment variables** (legacy method)
 
 ```bash
 cp .env.example .env
+# Edit .env and add your SPOTIFY_CLIENT
 ```
 
-Edit `.env` and add your Client ID:
-
-```
-SPOTIFY_CLIENT=your_client_id_here
-SPOTIFY_CALLBACK=http://localhost:8080/callback
-```
+Environment variables (`SPOTIFY_CLIENT`, `SPOTIFY_CALLBACK`) still work and take precedence over the config file.
 
 ### 3. Build and Run
 
@@ -68,6 +81,41 @@ go run main.go
 ```
 
 On first run, your browser will open for Spotify authentication. After authorizing, the token is cached for future sessions.
+
+## Configuration
+
+SpotTUI uses a JSON configuration file at `~/.config/spottui/config.json`. See `config.example.json` for all available options.
+
+### Configuration Options
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `client_id` | - | Spotify client ID |
+| `callback_url` | `http://localhost:8080/callback` | OAuth callback URL |
+| `api_timeout` | 15 | API request timeout in seconds |
+| `cache_enabled` | true | Enable TTL-based caching |
+| `playlist_tracks_ttl` | `5m` | Playlist tracks cache duration |
+| `album_tracks_ttl` | `10m` | Album tracks cache duration |
+| `artist_data_ttl` | `10m` | Artist data cache duration |
+| `search_results_ttl` | `2m` | Search results cache duration |
+| `retry_enabled` | true | Enable retry with exponential backoff |
+| `max_retries` | 3 | Maximum retry attempts |
+| `base_delay` | `500ms` | Initial delay between retries |
+| `max_delay` | `5s` | Maximum delay between retries |
+| `backoff_factor` | 2.0 | Exponential backoff multiplier |
+| `theme` | `spotify` | Color theme |
+| `default_view` | `playlists` | Default view on startup |
+| `show_notifications` | true | Show toast notifications |
+| `min_width` | 60 | Minimum terminal width |
+| `min_height` | 15 | Minimum terminal height |
+| `seek_increment` | 5000 | Seek increment in milliseconds |
+| `volume_step` | 10 | Volume step percentage |
+
+### Environment Variables
+
+The following environment variables override config file values:
+- `SPOTIFY_CLIENT` - Spotify client ID
+- `SPOTIFY_CALLBACK` - OAuth callback URL
 
 ## Keybindings
 
@@ -118,11 +166,16 @@ On first run, your browser will open for Spotify authentication. After authorizi
 ```
 spottui/
 ├── main.go                     # Entry point, env loading, auth init
+├── config.example.json         # Configuration file template
+├── .env.example                # Environment variable template
 ├── internal/
 │   ├── auth/
 │   │   ├── oauth.go           # PKCE OAuth flow, browser auth
 │   │   ├── pkce.go            # Code verifier/challenge generation
 │   │   └── token.go           # Token persistence (~/.config/spottui/)
+│   ├── config/
+│   │   ├── config.go          # Configuration struct and load/save
+│   │   └── config_test.go     # Configuration tests
 │   └── tui/
 │       ├── model.go           # Root Bubble Tea model, Update/View
 │       ├── commands.go        # Async tea.Cmd functions (API calls)
@@ -138,7 +191,6 @@ spottui/
 │           ├── list.go        # List delegates (playlist, track, device, search)
 │           └── player.go      # Now playing component with progress bar
 ├── demo.tape                   # VHS demo script
-├── .env.example
 ├── go.mod
 └── go.sum
 ```
@@ -146,6 +198,7 @@ spottui/
 ## How It Works
 
 - **OAuth PKCE Flow**: Secure authentication without client secret storage
+- **Configuration**: JSON config file at `~/.config/spottui/config.json` with XDG standard path
 - **Bubble Tea**: Elm-architecture TUI framework for state management
 - **Bubbles**: Pre-built components (lists, spinners)
 - **Lip Gloss**: Terminal styling
@@ -176,9 +229,10 @@ go test ./internal/tui/...
 go test ./internal/auth/...
 ```
 
-## Token Storage
+## Token & Configuration Storage
 
-Tokens are persisted to `~/.config/spottui/token.json` with 0600 permissions. The token is automatically refreshed when needed using `autoSaveTokenSource`.
+- **Tokens**: Persisted to `~/.config/spottui/token.json` with 0600 permissions. Automatically refreshed using `autoSaveTokenSource`.
+- **Configuration**: Stored at `~/.config/spottui/config.json`. See `config.example.json` for all available options.
 
 ## Contributing
 
