@@ -35,7 +35,7 @@ const (
 	MinWidth      = 60
 	MinHeight     = 15
 	HorizontalPad = 4
-	ListHeightSub = 12
+	ListHeightSub = 14
 	MinListHeight = 5
 )
 
