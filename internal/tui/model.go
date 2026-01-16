@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/zmb3/spotify/v2"
 
+	"github.com/razobeckett/spottui/internal/config"
 	"github.com/razobeckett/spottui/internal/tui/styles"
 	"github.com/razobeckett/spottui/internal/tui/views"
 )
@@ -55,6 +56,9 @@ type Model struct {
 	// Spotify client
 	client *spotify.Client
 	ctx    context.Context
+
+	// Configuration
+	cfg *config.Config
 
 	// Sub-models (embedded Bubble Tea components)
 	spinner         spinner.Model
@@ -119,7 +123,7 @@ type ProgressTickMsg struct{}
 type SeekTickMsg struct{}
 type FetchingTickMsg struct{}
 
-func NewModel(client *spotify.Client) Model {
+func NewModel(client *spotify.Client, cfg *config.Config) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
@@ -132,11 +136,12 @@ func NewModel(client *spotify.Client) Model {
 		view:        ViewLoading,
 		client:      client,
 		ctx:         context.Background(),
+		cfg:         cfg,
 		spinner:     s,
 		searchInput: ti,
 		styles:      styles.DefaultStyles(),
 		keys:        DefaultKeyMap(),
-		cache:       NewCache(),
+		cache:       NewCache(cfg),
 	}
 }
 

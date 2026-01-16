@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/zmb3/spotify/v2"
+
+	"github.com/razobeckett/spottui/internal/config"
 )
 
 type cacheEntry[T any] struct {
@@ -30,17 +32,17 @@ type Cache struct {
 	searchResultsTTL  time.Duration
 }
 
-func NewCache() *Cache {
+func NewCache(cfg *config.Config) *Cache {
 	return &Cache{
 		playlistTracks: make(map[spotify.ID]cacheEntry[[]spotify.PlaylistTrack]),
 		albumTracks:    make(map[spotify.ID]cacheEntry[[]spotify.SimpleTrack]),
 		artistData:     make(map[spotify.ID]cacheEntry[ArtistLoadedMsg]),
 		searchResults:  make(map[string]cacheEntry[SearchResultsMsg]),
 
-		playlistTracksTTL: 5 * time.Minute,
-		albumTracksTTL:    10 * time.Minute,
-		artistDataTTL:     10 * time.Minute,
-		searchResultsTTL:  2 * time.Minute,
+		playlistTracksTTL: time.Duration(cfg.PlaylistTracksTTL),
+		albumTracksTTL:    time.Duration(cfg.AlbumTracksTTL),
+		artistDataTTL:     time.Duration(cfg.ArtistDataTTL),
+		searchResultsTTL:  time.Duration(cfg.SearchResultsTTL),
 	}
 }
 

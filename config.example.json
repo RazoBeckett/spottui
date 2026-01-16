@@ -1,0 +1,33 @@
+{
+  // Spotify Settings
+  "client_id": "your_spotify_client_id_here",
+  "callback_url": "http://localhost:8080/callback",
+  "api_timeout": 15,
+
+  // Cache Settings (durations use Go format: "5m" = 5 minutes, "10s" = 10 seconds)
+  "cache_enabled": true,
+  "playlist_tracks_ttl": "5m",
+  "album_tracks_ttl": "10m",
+  "artist_data_ttl": "10m",
+  "search_results_ttl": "2m",
+
+  // Retry Settings (durations use Go format)
+  "retry_enabled": true,
+  "max_retries": 3,
+  "base_delay": "500ms",
+  "max_delay": "5s",
+  "backoff_factor": 2.0,
+
+  // UI Settings
+  "theme": "spotify",
+  "default_view": "playlists",
+  "show_notifications": true,
+
+  // Layout Settings
+  "min_width": 60,
+  "min_height": 15,
+
+  // Playback Settings
+  "seek_increment": 5000,
+  "volume_step": 10
+}

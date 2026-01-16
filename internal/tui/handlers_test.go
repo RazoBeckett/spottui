@@ -10,7 +10,7 @@ import (
 )
 
 func TestHandleKeyPress_Quit(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewPlaylists
@@ -24,7 +24,7 @@ func TestHandleKeyPress_Quit(t *testing.T) {
 }
 
 func TestHandleKeyPress_Help(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}}
@@ -40,7 +40,7 @@ func TestHandleKeyPress_Help(t *testing.T) {
 }
 
 func TestHandleKeyPress_HelpToggle(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewHelp
 	m.prevView = ViewTracks
 
@@ -54,7 +54,7 @@ func TestHandleKeyPress_HelpToggle(t *testing.T) {
 }
 
 func TestHandleKeyPress_BackFromTracks(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewTracks
 
 	msg := tea.KeyMsg{Type: tea.KeyEsc}
@@ -67,7 +67,7 @@ func TestHandleKeyPress_BackFromTracks(t *testing.T) {
 }
 
 func TestHandleKeyPress_BackFromAlbum(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewAlbum
 	m.prevView = ViewSearch
 
@@ -81,7 +81,7 @@ func TestHandleKeyPress_BackFromAlbum(t *testing.T) {
 }
 
 func TestHandleKeyPress_BackFromArtist(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewArtist
 	m.prevView = ViewTracks
 
@@ -95,7 +95,7 @@ func TestHandleKeyPress_BackFromArtist(t *testing.T) {
 }
 
 func TestHandleKeyPress_BackFromLyrics(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewLyrics
 	m.prevView = ViewPlaylists
 
@@ -109,7 +109,7 @@ func TestHandleKeyPress_BackFromLyrics(t *testing.T) {
 }
 
 func TestHandleKeyPress_BackFromDevices(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewDevices
 	m.prevView = ViewPlaylists
 
@@ -123,7 +123,7 @@ func TestHandleKeyPress_BackFromDevices(t *testing.T) {
 }
 
 func TestHandleKeyPress_BackFromHistory(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewHistory
 	m.prevView = ViewPlaylists
 
@@ -137,7 +137,7 @@ func TestHandleKeyPress_BackFromHistory(t *testing.T) {
 }
 
 func TestHandleKeyPress_BackFromAddToPlaylist(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewAddToPlaylist
 	m.prevView = ViewTracks
 
@@ -151,7 +151,7 @@ func TestHandleKeyPress_BackFromAddToPlaylist(t *testing.T) {
 }
 
 func TestHandleKeyPress_PlayPause(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeySpace}
@@ -163,7 +163,7 @@ func TestHandleKeyPress_PlayPause(t *testing.T) {
 }
 
 func TestHandleKeyPress_Next(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}
@@ -175,7 +175,7 @@ func TestHandleKeyPress_Next(t *testing.T) {
 }
 
 func TestHandleKeyPress_Prev(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}
@@ -187,7 +187,7 @@ func TestHandleKeyPress_Prev(t *testing.T) {
 }
 
 func TestHandleKeyPress_VolumeUp(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'+'}}
@@ -199,7 +199,7 @@ func TestHandleKeyPress_VolumeUp(t *testing.T) {
 }
 
 func TestHandleKeyPress_VolumeDown(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'-'}}
@@ -211,7 +211,7 @@ func TestHandleKeyPress_VolumeDown(t *testing.T) {
 }
 
 func TestHandleKeyPress_Shuffle(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
@@ -223,7 +223,7 @@ func TestHandleKeyPress_Shuffle(t *testing.T) {
 }
 
 func TestHandleKeyPress_Repeat(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}}
@@ -235,7 +235,7 @@ func TestHandleKeyPress_Repeat(t *testing.T) {
 }
 
 func TestHandleKeyPress_SeekBackward(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewHelp
 	m.localProgress = 10000
 
@@ -255,7 +255,7 @@ func TestHandleKeyPress_SeekBackward(t *testing.T) {
 }
 
 func TestHandleKeyPress_SeekForward(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewHelp
 	m.localProgress = 10000
 
@@ -275,7 +275,7 @@ func TestHandleKeyPress_SeekForward(t *testing.T) {
 }
 
 func TestHandleKeyPress_SeekBackwardClampToZero(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewHelp
 	m.localProgress = 2000
 
@@ -289,7 +289,7 @@ func TestHandleKeyPress_SeekBackwardClampToZero(t *testing.T) {
 }
 
 func TestHandleKeyPress_Refresh(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyCtrlR}
@@ -301,7 +301,7 @@ func TestHandleKeyPress_Refresh(t *testing.T) {
 }
 
 func TestHandleKeyPress_GlobalSearch(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'S'}}
@@ -323,7 +323,7 @@ func TestHandleKeyPress_GlobalSearch(t *testing.T) {
 }
 
 func TestHandleKeyPress_History(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'H'}}
@@ -342,7 +342,7 @@ func TestHandleKeyPress_History(t *testing.T) {
 }
 
 func TestHandleKeyPress_Devices(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
@@ -361,7 +361,7 @@ func TestHandleKeyPress_Devices(t *testing.T) {
 }
 
 func TestHandleKeyPress_LyricsWithPlayback(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 	m.playbackState = &spotify.PlayerState{
 		CurrentlyPlaying: spotify.CurrentlyPlaying{
@@ -387,7 +387,7 @@ func TestHandleKeyPress_LyricsWithPlayback(t *testing.T) {
 }
 
 func TestHandleKeyPress_LyricsWithoutPlayback(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'L'}}
@@ -399,7 +399,7 @@ func TestHandleKeyPress_LyricsWithoutPlayback(t *testing.T) {
 }
 
 func TestHandleLyricsKeys_ScrollUp(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewLyrics
 	m.lyricsData = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5"
 	m.lyricsScrollOffset = 2
@@ -415,7 +415,7 @@ func TestHandleLyricsKeys_ScrollUp(t *testing.T) {
 }
 
 func TestHandleLyricsKeys_ScrollDown(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewLyrics
 	m.lyricsData = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\nLine 11\nLine 12\nLine 13\nLine 14\nLine 15\nLine 16\nLine 17\nLine 18\nLine 19\nLine 20"
 	m.lyricsScrollOffset = 0
@@ -431,7 +431,7 @@ func TestHandleLyricsKeys_ScrollDown(t *testing.T) {
 }
 
 func TestHandleLyricsKeys_ScrollUpAtTop(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewLyrics
 	m.lyricsData = "Line 1\nLine 2"
 	m.lyricsScrollOffset = 0
@@ -447,7 +447,7 @@ func TestHandleLyricsKeys_ScrollUpAtTop(t *testing.T) {
 }
 
 func TestHandleArtistKeys_TabToggle(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewArtist
 	m.artistViewMode = "tracks"
 	m.width = 100
@@ -465,7 +465,7 @@ func TestHandleArtistKeys_TabToggle(t *testing.T) {
 }
 
 func TestHandleArtistKeys_TabToggleBack(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewArtist
 	m.artistViewMode = "albums"
 	m.width = 100
@@ -483,7 +483,7 @@ func TestHandleArtistKeys_TabToggleBack(t *testing.T) {
 }
 
 func TestHandleArtistKeys_Back(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewArtist
 	m.prevView = ViewSearch
 	m.artistViewMode = "tracks"
@@ -502,7 +502,7 @@ func TestHandleArtistKeys_Back(t *testing.T) {
 }
 
 func TestHasSearchResults_Empty(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 
 	if m.hasSearchResults() {
 		t.Error("hasSearchResults() should return false when no results")
@@ -510,7 +510,7 @@ func TestHasSearchResults_Empty(t *testing.T) {
 }
 
 func TestHasSearchResults_WithTracks(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.searchTracksData = []spotify.FullTrack{{}}
 
 	if !m.hasSearchResults() {
@@ -519,7 +519,7 @@ func TestHasSearchResults_WithTracks(t *testing.T) {
 }
 
 func TestHasSearchResults_WithAlbums(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.searchAlbumsData = []spotify.SimpleAlbum{{}}
 
 	if !m.hasSearchResults() {
@@ -528,7 +528,7 @@ func TestHasSearchResults_WithAlbums(t *testing.T) {
 }
 
 func TestHasSearchResults_WithPlaylists(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.searchPlaylistsData = []spotify.SimplePlaylist{{}}
 
 	if !m.hasSearchResults() {
@@ -537,7 +537,7 @@ func TestHasSearchResults_WithPlaylists(t *testing.T) {
 }
 
 func TestHasSearchResults_WithArtists(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.searchArtistsData = []spotify.FullArtist{{}}
 
 	if !m.hasSearchResults() {
@@ -546,7 +546,7 @@ func TestHasSearchResults_WithArtists(t *testing.T) {
 }
 
 func TestHandleSearchKeys_FocusOnSlash(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewSearch
 	m.searchInput.Blur()
 
@@ -563,7 +563,7 @@ func TestHandleSearchKeys_FocusOnSlash(t *testing.T) {
 }
 
 func TestHandleSearchKeys_FocusOnI(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewSearch
 	m.searchInput.Blur()
 
@@ -580,7 +580,7 @@ func TestHandleSearchKeys_FocusOnI(t *testing.T) {
 }
 
 func TestHandleSearchKeys_EscBlursInput(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewSearch
 	m.searchInput.Focus()
 
@@ -594,7 +594,7 @@ func TestHandleSearchKeys_EscBlursInput(t *testing.T) {
 }
 
 func TestHandleSearchKeys_EnterWithQuery(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewSearch
 	m.searchInput.Focus()
 	m.searchInput.SetValue("test query")
@@ -615,7 +615,7 @@ func TestHandleSearchKeys_EnterWithQuery(t *testing.T) {
 }
 
 func TestHandleSearchKeys_EnterWithEmptyQuery(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.view = ViewSearch
 	m.searchInput.Focus()
 	m.searchInput.SetValue("")

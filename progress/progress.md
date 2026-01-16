@@ -1,5 +1,22 @@
 # SpotTUI Progress Tracker
 
+## Recently Completed (Jan 16, 2026)
+
+- [x] **Configuration support** - @razobeckett
+  - Created `internal/config/config.go` with comprehensive Config struct
+  - Config file location: `~/.config/spottui/config.json` (XDG standard)
+  - Supports all configurable settings: Spotify credentials, cache TTLs, retry params, UI theme, layout, playback
+  - Environment variable override: `SPOTIFY_CLIENT`, `SPOTIFY_CALLBACK`
+  - JSON file format with sensible defaults for all settings
+  - Created `internal/config/config_test.go` with 8 test cases
+  - Updated `main.go` to use new config system
+  - Updated `model.go` to embed config and pass to cache
+  - Updated `cache.go` to use config TTL values
+  - Updated all test files to use new config parameter
+  - Created `config.example.json` for user reference
+  - Updated `.env.example` to document new config approach
+  - All tests pass: `go test ./...` (6 packages, all passing)
+
 ## Recently Completed (Jan 15, 2026)
 
 - [x] **README documentation update** - @razobeckett

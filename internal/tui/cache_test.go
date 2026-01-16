@@ -6,10 +6,22 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/zmb3/spotify/v2"
+
+	"github.com/razobeckett/spottui/internal/config"
 )
 
+func getTestConfig() *config.Config {
+	return &config.Config{
+		CacheEnabled:      true,
+		PlaylistTracksTTL: config.Duration(5 * time.Minute),
+		AlbumTracksTTL:    config.Duration(10 * time.Minute),
+		ArtistDataTTL:     config.Duration(10 * time.Minute),
+		SearchResultsTTL:  config.Duration(2 * time.Minute),
+	}
+}
+
 func TestCache_PlaylistTracks(t *testing.T) {
-	cache := NewCache()
+	cache := NewCache(getTestConfig())
 	playlistID := spotify.ID("test-playlist")
 
 	_, ok := cache.GetPlaylistTracks(playlistID)
@@ -32,7 +44,7 @@ func TestCache_PlaylistTracks(t *testing.T) {
 }
 
 func TestCache_AlbumTracks(t *testing.T) {
-	cache := NewCache()
+	cache := NewCache(getTestConfig())
 	albumID := spotify.ID("test-album")
 
 	_, ok := cache.GetAlbumTracks(albumID)
@@ -50,7 +62,7 @@ func TestCache_AlbumTracks(t *testing.T) {
 }
 
 func TestCache_ArtistData(t *testing.T) {
-	cache := NewCache()
+	cache := NewCache(getTestConfig())
 	artistID := spotify.ID("test-artist")
 
 	_, ok := cache.GetArtistData(artistID)
@@ -70,7 +82,7 @@ func TestCache_ArtistData(t *testing.T) {
 }
 
 func TestCache_SearchResults(t *testing.T) {
-	cache := NewCache()
+	cache := NewCache(getTestConfig())
 	query := "test query"
 
 	_, ok := cache.GetSearchResults(query)
@@ -90,7 +102,7 @@ func TestCache_SearchResults(t *testing.T) {
 }
 
 func TestCache_Clear(t *testing.T) {
-	cache := NewCache()
+	cache := NewCache(getTestConfig())
 
 	cache.SetPlaylistTracks(spotify.ID("p1"), []spotify.PlaylistTrack{})
 	cache.SetAlbumTracks(spotify.ID("a1"), []spotify.SimpleTrack{})

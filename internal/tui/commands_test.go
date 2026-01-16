@@ -8,7 +8,7 @@ import (
 )
 
 func TestScheduleErrorDismiss(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	cmd := m.scheduleErrorDismiss()
 
 	if cmd == nil {
@@ -17,7 +17,7 @@ func TestScheduleErrorDismiss(t *testing.T) {
 }
 
 func TestScheduleNotifyDismiss(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	cmd := m.scheduleNotifyDismiss()
 
 	if cmd == nil {
@@ -26,7 +26,7 @@ func TestScheduleNotifyDismiss(t *testing.T) {
 }
 
 func TestSchedulePlaybackPoll(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	cmd := m.schedulePlaybackPoll()
 
 	if cmd == nil {
@@ -35,7 +35,7 @@ func TestSchedulePlaybackPoll(t *testing.T) {
 }
 
 func TestScheduleProgressTick(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	cmd := m.scheduleProgressTick()
 
 	if cmd == nil {
@@ -44,7 +44,7 @@ func TestScheduleProgressTick(t *testing.T) {
 }
 
 func TestScheduleFetchingTick(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	cmd := m.scheduleFetchingTick()
 
 	if cmd == nil {
@@ -53,7 +53,7 @@ func TestScheduleFetchingTick(t *testing.T) {
 }
 
 func TestScheduleSeekTick(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	cmd := m.scheduleSeekTick()
 
 	if cmd == nil {
@@ -62,7 +62,7 @@ func TestScheduleSeekTick(t *testing.T) {
 }
 
 func TestStartFetching(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.fetching = false
 	m.fetchingDots = 5
 
@@ -80,7 +80,7 @@ func TestStartFetching(t *testing.T) {
 }
 
 func TestStopFetching(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.fetching = true
 	m.fetchingDots = 3
 

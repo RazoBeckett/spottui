@@ -6,45 +6,44 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/joho/godotenv"
 
 	"github.com/razobeckett/spottui/internal/auth"
+	"github.com/razobeckett/spottui/internal/config"
 	"github.com/razobeckett/spottui/internal/tui"
 )
 
 func main() {
-	// Load .env file if present
-	godotenv.Load()
+	// Load configuration from config.json
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Printf("Error loading configuration: %v\n", err)
+		os.Exit(1)
+	}
 
-	// Get client ID from environment
-	clientID := os.Getenv("SPOTIFY_CLIENT")
-	if clientID == "" {
-		fmt.Println("Error: SPOTIFY_CLIENT environment variable not set")
+	// Check if client ID is set (from config or environment)
+	if cfg.ClientID == "" {
+		fmt.Println("Error: Spotify client ID not configured")
 		fmt.Println()
 		fmt.Println("To use SpotTUI, you need to:")
 		fmt.Println("1. Create an app at https://developer.spotify.com/dashboard")
 		fmt.Println("2. Set the redirect URI to: http://localhost:8080/callback")
-		fmt.Println("3. Create a .env file with:")
-		fmt.Println("   SPOTIFY_CLIENT=your_client_id")
-		fmt.Println("   SPOTIFY_CALLBACK=http://localhost:8080/callback")
-		os.Exit(1)
-	}
-
-	// Get callback URL from environment
-	callbackURL := os.Getenv("SPOTIFY_CALLBACK")
-	if callbackURL == "" {
-		callbackURL = "http://localhost:8080/callback"
-	}
-
-	// Authenticate
-	authenticator, err := auth.NewAuthenticator(clientID, callbackURL)
-	if err != nil {
-		fmt.Printf("Failed to create authenticator: %v\n", err)
+		fmt.Println("3. Add your client ID to ~/.config/spottui/config.json:")
+		fmt.Println(`   {"client_id": "your_client_id_here"}`)
+		fmt.Println()
+		fmt.Println("Or set the SPOTIFY_CLIENT environment variable:")
+		fmt.Println("   SPOTIFY_CLIENT=your_client_id ./spottui")
 		os.Exit(1)
 	}
 
 	fmt.Println("🎵 SpotTUI - Spotify Terminal Client")
 	fmt.Println()
+
+	// Authenticate
+	authenticator, err := auth.NewAuthenticator(cfg.ClientID, cfg.CallbackURL)
+	if err != nil {
+		fmt.Printf("Failed to create authenticator: %v\n", err)
+		os.Exit(1)
+	}
 
 	client, err := authenticator.GetClient(context.Background())
 	if err != nil {
@@ -56,7 +55,7 @@ func main() {
 	fmt.Println("Starting TUI...")
 
 	// Create and run TUI
-	model := tui.NewModel(client)
+	model := tui.NewModel(client, &cfg)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {

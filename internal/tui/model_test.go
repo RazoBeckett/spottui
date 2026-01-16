@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewModel(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 
 	if m.view != ViewLoading {
 		t.Errorf("NewModel() view = %v, want %v", m.view, ViewLoading)
@@ -53,7 +53,7 @@ func TestViewConstants(t *testing.T) {
 }
 
 func TestModelListDimensions(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 
@@ -68,7 +68,7 @@ func TestModelListDimensions(t *testing.T) {
 }
 
 func TestModelListHeightMinimum(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.height = 10
 
 	if m.listHeight() < MinListHeight {
@@ -77,7 +77,7 @@ func TestModelListHeightMinimum(t *testing.T) {
 }
 
 func TestUpdateWindowSizeMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	msg := tea.WindowSizeMsg{Width: 120, Height: 40}
 
 	newModel, cmd := m.Update(msg)
@@ -95,7 +95,7 @@ func TestUpdateWindowSizeMsg(t *testing.T) {
 }
 
 func TestUpdateSpinnerTickMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	msg := spinner.TickMsg{}
 
 	newModel, cmd := m.Update(msg)
@@ -107,7 +107,7 @@ func TestUpdateSpinnerTickMsg(t *testing.T) {
 }
 
 func TestUpdateUserDataMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 
@@ -145,7 +145,7 @@ func TestUpdateUserDataMsg(t *testing.T) {
 }
 
 func TestUpdateTracksLoadedMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.fetching = true
@@ -170,7 +170,7 @@ func TestUpdateTracksLoadedMsg(t *testing.T) {
 }
 
 func TestUpdatePlaybackStateMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 
 	state := &spotify.PlayerState{
 		CurrentlyPlaying: spotify.CurrentlyPlaying{
@@ -196,7 +196,7 @@ func TestUpdatePlaybackStateMsg(t *testing.T) {
 }
 
 func TestUpdatePlaybackStateMsgNil(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.isPlaying = true
 
 	msg := PlaybackStateMsg{State: nil}
@@ -210,7 +210,7 @@ func TestUpdatePlaybackStateMsgNil(t *testing.T) {
 }
 
 func TestUpdateErrMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.fetching = true
 
 	msg := ErrMsg{Err: &testError{msg: "test error"}}
@@ -241,7 +241,7 @@ func (e *testError) Error() string {
 }
 
 func TestUpdateDismissErrorMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.showError = true
 	m.errMsg = "some error"
 
@@ -262,7 +262,7 @@ func TestUpdateDismissErrorMsg(t *testing.T) {
 }
 
 func TestUpdateVolumeChangedMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.playbackState = &spotify.PlayerState{
 		Device: spotify.PlayerDevice{Volume: 50},
 	}
@@ -278,7 +278,7 @@ func TestUpdateVolumeChangedMsg(t *testing.T) {
 }
 
 func TestUpdateShuffleToggledMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.playbackState = &spotify.PlayerState{
 		ShuffleState: false,
 	}
@@ -294,7 +294,7 @@ func TestUpdateShuffleToggledMsg(t *testing.T) {
 }
 
 func TestUpdateRepeatCycledMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.playbackState = &spotify.PlayerState{
 		RepeatState: "off",
 	}
@@ -310,7 +310,7 @@ func TestUpdateRepeatCycledMsg(t *testing.T) {
 }
 
 func TestUpdateDevicesLoadedMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.fetching = true
@@ -334,7 +334,7 @@ func TestUpdateDevicesLoadedMsg(t *testing.T) {
 }
 
 func TestUpdateProgressTickMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.isPlaying = true
 	m.view = ViewLyrics
 	m.localProgress = 1000
@@ -354,7 +354,7 @@ func TestUpdateProgressTickMsg(t *testing.T) {
 }
 
 func TestUpdateFetchingTickMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.fetching = true
 	m.fetchingDots = 1
 
@@ -372,7 +372,7 @@ func TestUpdateFetchingTickMsg(t *testing.T) {
 }
 
 func TestUpdateFetchingTickMsgNotFetching(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.fetching = false
 
 	msg := FetchingTickMsg{}
@@ -385,7 +385,7 @@ func TestUpdateFetchingTickMsgNotFetching(t *testing.T) {
 }
 
 func TestUpdateLikeToggledMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 
 	msg := LikeToggledMsg{
 		TrackID:   "track123",
@@ -408,7 +408,7 @@ func TestUpdateLikeToggledMsg(t *testing.T) {
 }
 
 func TestUpdateLikeToggledMsgUnlike(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 
 	msg := LikeToggledMsg{
 		TrackID:   "track123",
@@ -425,7 +425,7 @@ func TestUpdateLikeToggledMsgUnlike(t *testing.T) {
 }
 
 func TestUpdateDismissNotifyMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.showNotify = true
 	m.notifyMsg = "some notification"
 
@@ -446,7 +446,7 @@ func TestUpdateDismissNotifyMsg(t *testing.T) {
 }
 
 func TestUpdateTrackAddedToPlaylistMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 
 	msg := TrackAddedToPlaylistMsg{
 		PlaylistName: "My Playlist",
@@ -468,7 +468,7 @@ func TestUpdateTrackAddedToPlaylistMsg(t *testing.T) {
 }
 
 func TestViewRendersTooSmall(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 30
 	m.height = 10
 
@@ -480,7 +480,7 @@ func TestViewRendersTooSmall(t *testing.T) {
 }
 
 func TestViewRendersLoading(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewLoading
@@ -493,7 +493,7 @@ func TestViewRendersLoading(t *testing.T) {
 }
 
 func TestViewRendersPlaylists(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewPlaylists
@@ -506,7 +506,7 @@ func TestViewRendersPlaylists(t *testing.T) {
 }
 
 func TestViewRendersTracks(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewTracks
@@ -519,7 +519,7 @@ func TestViewRendersTracks(t *testing.T) {
 }
 
 func TestViewRendersHelp(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewHelp
@@ -532,7 +532,7 @@ func TestViewRendersHelp(t *testing.T) {
 }
 
 func TestViewRendersSearch(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewSearch
@@ -545,7 +545,7 @@ func TestViewRendersSearch(t *testing.T) {
 }
 
 func TestViewRendersDevices(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewDevices
@@ -558,7 +558,7 @@ func TestViewRendersDevices(t *testing.T) {
 }
 
 func TestViewRendersHistory(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewHistory
@@ -571,7 +571,7 @@ func TestViewRendersHistory(t *testing.T) {
 }
 
 func TestViewRendersAlbum(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewAlbum
@@ -584,7 +584,7 @@ func TestViewRendersAlbum(t *testing.T) {
 }
 
 func TestViewRendersArtist(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewArtist
@@ -598,7 +598,7 @@ func TestViewRendersArtist(t *testing.T) {
 }
 
 func TestViewRendersLyrics(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewLyrics
@@ -612,7 +612,7 @@ func TestViewRendersLyrics(t *testing.T) {
 }
 
 func TestViewRendersAddToPlaylist(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = ViewAddToPlaylist
@@ -626,7 +626,7 @@ func TestViewRendersAddToPlaylist(t *testing.T) {
 }
 
 func TestViewRendersUnknown(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.view = View(99)
@@ -639,7 +639,7 @@ func TestViewRendersUnknown(t *testing.T) {
 }
 
 func TestUpdateSeekTickMsgPending(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.seekPending = true
 	m.pendingSeek = 10000
 	m.lastSeekRequest = time.Now().Add(-200 * time.Millisecond)
@@ -658,7 +658,7 @@ func TestUpdateSeekTickMsgPending(t *testing.T) {
 }
 
 func TestUpdateSeekTickMsgRecentRequest(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.seekPending = true
 	m.pendingSeek = 10000
 	m.lastSeekRequest = time.Now()
@@ -677,7 +677,7 @@ func TestUpdateSeekTickMsgRecentRequest(t *testing.T) {
 }
 
 func TestUpdateSearchResultsMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.fetching = true
@@ -713,7 +713,7 @@ func TestUpdateSearchResultsMsg(t *testing.T) {
 }
 
 func TestUpdateHistoryLoadedMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.fetching = true
@@ -736,7 +736,7 @@ func TestUpdateHistoryLoadedMsg(t *testing.T) {
 }
 
 func TestUpdateAlbumTracksLoadedMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.fetching = true
@@ -761,7 +761,7 @@ func TestUpdateAlbumTracksLoadedMsg(t *testing.T) {
 }
 
 func TestUpdateArtistLoadedMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.width = 100
 	m.height = 50
 	m.fetching = true
@@ -803,7 +803,7 @@ func TestUpdateArtistLoadedMsg(t *testing.T) {
 }
 
 func TestUpdateLyricsLoadedMsg(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.fetching = true
 	m.fetchingLyrics = true
 
@@ -835,7 +835,7 @@ func TestUpdateLyricsLoadedMsg(t *testing.T) {
 }
 
 func TestUpdateLyricsLoadedMsgWithSynced(t *testing.T) {
-	m := NewModel(nil)
+	m := NewModel(nil, getTestConfig())
 	m.fetching = true
 
 	msg := LyricsLoadedMsg{
