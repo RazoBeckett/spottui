@@ -2,6 +2,16 @@
 
 ## Recently Completed (Jan 15, 2026)
 
+- [x] **README documentation update** - @razobeckett
+  - Added new features to README: lyrics display, seek forward/backward, artist view, like tracks, add to playlist
+  - Updated keybindings table with all new keys ([, ], L, A, l, a)
+  - Updated project structure (model.go refactored into model.go, handlers.go, render.go, retry.go, cache.go, lrc.go)
+  - Updated Go version requirement to 1.25+
+  - Added testing section
+  - Added contributing section
+  - Added smart caching and error handling to "How It Works" section
+  - Added lyrics integration details
+
 - [x] **Auto-fetch lyrics on track change** - @razobeckett
   - Lyrics view now detects when track changes (via next/prev or external control)
   - Compares current playback track with displayed lyrics track/artist
