@@ -80,6 +80,24 @@ type TrackAddedToPlaylistMsg struct {
 	TrackName    string
 }
 
+type PlaylistCreatedMsg struct {
+	Playlist spotify.FullPlaylist
+}
+
+type TrackRemovedFromPlaylistMsg struct {
+	PlaylistName string
+	TrackName    string
+}
+
+type PlaylistUpdatedMsg struct{}
+
+type PlaylistDeletedMsg struct{}
+
+type PlaylistFollowedMsg struct {
+	PlaylistName string
+	Followed     bool
+}
+
 func (m Model) scheduleErrorDismiss() tea.Cmd {
 	return tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
 		return DismissErrorMsg{}
@@ -915,6 +933,130 @@ func (m Model) addTrackToPlaylist(playlistID spotify.ID, playlistName string, tr
 		return TrackAddedToPlaylistMsg{
 			PlaylistName: playlistName,
 			TrackName:    trackName,
+		}
+	}
+}
+
+func (m Model) createPlaylist(name, description string, isPublic bool) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
+
+		user, err := m.client.CurrentUser(ctx)
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+
+		playlist, err := m.client.CreatePlaylistForUser(ctx, user.ID, name, description, isPublic, false)
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+
+		return PlaylistCreatedMsg{Playlist: *playlist}
+	}
+}
+
+func (m Model) removeTrackFromPlaylist(playlistID, trackID spotify.ID, trackName, playlistName string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
+
+		_, err := m.client.RemoveTracksFromPlaylist(ctx, playlistID, trackID)
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+
+		m.cache.InvalidatePlaylistTracks(playlistID)
+
+		return TrackRemovedFromPlaylistMsg{
+			PlaylistName: playlistName,
+			TrackName:    trackName,
+		}
+	}
+}
+
+func (m Model) reorderPlaylistTracks(playlistID spotify.ID, rangeStart, insertBefore int) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
+
+		_, err := m.client.ReorderPlaylistTracks(ctx, playlistID, spotify.PlaylistReorderOptions{
+			RangeStart:   spotify.Numeric(rangeStart),
+			InsertBefore: spotify.Numeric(insertBefore),
+		})
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+
+		m.cache.InvalidatePlaylistTracks(playlistID)
+
+		return PollPlaybackMsg{}
+	}
+}
+
+func (m Model) updatePlaylistDetails(playlistID spotify.ID, name, description string, isPublic bool) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
+
+		err := m.client.ChangePlaylistName(ctx, playlistID, name)
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+
+		err = m.client.ChangePlaylistDescription(ctx, playlistID, description)
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+
+		return PlaylistUpdatedMsg{}
+	}
+}
+
+func (m Model) deletePlaylist(playlistID spotify.ID) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
+
+		err := m.client.UnfollowPlaylist(ctx, playlistID)
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+
+		return PlaylistDeletedMsg{}
+	}
+}
+
+func (m Model) followPlaylist(playlistID spotify.ID, playlistName string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
+
+		err := m.client.FollowPlaylist(ctx, playlistID, true)
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+
+		return PlaylistFollowedMsg{
+			PlaylistName: playlistName,
+			Followed:     true,
+		}
+	}
+}
+
+func (m Model) unfollowPlaylist(playlistID spotify.ID, playlistName string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
+
+		err := m.client.UnfollowPlaylist(ctx, playlistID)
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+
+		return PlaylistFollowedMsg{
+			PlaylistName: playlistName,
+			Followed:     false,
 		}
 	}
 }

@@ -30,6 +30,8 @@ const (
 	ViewHelp
 	ViewLyrics
 	ViewAddToPlaylist
+	ViewCreatePlaylist
+	ViewEditPlaylist
 )
 
 const (
@@ -110,6 +112,14 @@ type Model struct {
 	addToPlaylistTrack spotify.ID
 	addToPlaylistList  list.Model
 
+	createPlaylistName     textinput.Model
+	createPlaylistDesc     textinput.Model
+	createPlaylistIsPublic bool
+
+	editPlaylistName     textinput.Model
+	editPlaylistDesc     textinput.Model
+	editPlaylistIsPublic bool
+
 	fetching     bool
 	fetchingDots int
 
@@ -132,16 +142,40 @@ func NewModel(client *spotify.Client, cfg *config.Config) Model {
 	ti.CharLimit = 100
 	ti.Width = 40
 
+	createName := textinput.New()
+	createName.Placeholder = "Playlist name"
+	createName.CharLimit = 100
+	createName.Width = 40
+
+	createDesc := textinput.New()
+	createDesc.Placeholder = "Description (optional)"
+	createDesc.CharLimit = 300
+	createDesc.Width = 60
+
+	editName := textinput.New()
+	editName.CharLimit = 100
+	editName.Width = 40
+
+	editDesc := textinput.New()
+	editDesc.CharLimit = 300
+	editDesc.Width = 60
+
 	return Model{
-		view:        ViewLoading,
-		client:      client,
-		ctx:         context.Background(),
-		cfg:         cfg,
-		spinner:     s,
-		searchInput: ti,
-		styles:      styles.DefaultStyles(),
-		keys:        DefaultKeyMap(),
-		cache:       NewCache(cfg),
+		view:                   ViewLoading,
+		client:                 client,
+		ctx:                    context.Background(),
+		cfg:                    cfg,
+		spinner:                s,
+		searchInput:            ti,
+		createPlaylistName:     createName,
+		createPlaylistDesc:     createDesc,
+		createPlaylistIsPublic: false,
+		editPlaylistName:       editName,
+		editPlaylistDesc:       editDesc,
+		editPlaylistIsPublic:   false,
+		styles:                 styles.DefaultStyles(),
+		keys:                   DefaultKeyMap(),
+		cache:                  NewCache(cfg),
 	}
 }
 
@@ -404,6 +438,42 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.notifyMsg = "Added to " + msg.PlaylistName
 		m.showNotify = true
 		return m, m.scheduleNotifyDismiss()
+
+	case PlaylistCreatedMsg:
+		m.notifyMsg = "Created: " + msg.Playlist.Name
+		m.showNotify = true
+		m.view = m.prevView
+		m.selectedPlaylist = &spotify.SimplePlaylist{
+			ID:   msg.Playlist.ID,
+			Name: msg.Playlist.Name,
+			URI:  msg.Playlist.URI,
+		}
+		return m, tea.Batch(m.scheduleNotifyDismiss(), m.fetchTracks(msg.Playlist.ID))
+
+	case TrackRemovedFromPlaylistMsg:
+		m.notifyMsg = "Removed: " + msg.TrackName
+		m.showNotify = true
+		return m, tea.Batch(m.scheduleNotifyDismiss(), m.fetchTracks(m.selectedPlaylist.ID))
+
+	case PlaylistUpdatedMsg:
+		m.notifyMsg = "Playlist updated"
+		m.showNotify = true
+		return m, tea.Batch(m.scheduleNotifyDismiss(), m.fetchInitialData())
+
+	case PlaylistDeletedMsg:
+		m.notifyMsg = "Playlist deleted"
+		m.showNotify = true
+		m.view = ViewPlaylists
+		return m, tea.Batch(m.scheduleNotifyDismiss(), m.fetchInitialData())
+
+	case PlaylistFollowedMsg:
+		action := "Followed"
+		if !msg.Followed {
+			action = "Unfollowed"
+		}
+		m.notifyMsg = action + ": " + msg.PlaylistName
+		m.showNotify = true
+		return m, tea.Batch(m.scheduleNotifyDismiss(), m.fetchInitialData())
 	}
 
 	// Delegate to active view's sub-model
@@ -451,6 +521,10 @@ func (m Model) View() string {
 		return m.renderLyrics()
 	case ViewAddToPlaylist:
 		return m.renderAddToPlaylist()
+	case ViewCreatePlaylist:
+		return m.renderCreatePlaylist()
+	case ViewEditPlaylist:
+		return m.renderEditPlaylist()
 	default:
 		return "Unknown view"
 	}

@@ -623,3 +623,91 @@ func (m Model) renderAddToPlaylist() string {
 		help,
 	)
 }
+
+func (m Model) renderCreatePlaylist() string {
+	header := m.styles.Header.Render("Create New Playlist")
+	notification := m.renderNotification()
+	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	help := m.renderHelpBar()
+
+	publicText := "Private"
+	if m.createPlaylistIsPublic {
+		publicText = "Public"
+	}
+
+	labelStyle := m.styles.Header.Copy().Padding(0, 1)
+
+	var content strings.Builder
+	content.WriteString(header)
+	content.WriteString("\n\n")
+	content.WriteString(labelStyle.Render("Name:"))
+	content.WriteString("\n")
+	content.WriteString(m.createPlaylistName.View())
+	content.WriteString("\n\n")
+	content.WriteString(labelStyle.Render("Description (optional):"))
+	content.WriteString("\n")
+	content.WriteString(m.createPlaylistDesc.View())
+	content.WriteString("\n\n")
+	content.WriteString(labelStyle.Render("Visibility: " + publicText))
+	content.WriteString("\n")
+	content.WriteString(m.styles.Muted.Render("Press 'p' to toggle public/private, Enter to save, Esc to cancel"))
+
+	if notification != "" {
+		return lipgloss.JoinVertical(lipgloss.Left,
+			content.String(),
+			notification,
+			player,
+			help,
+		)
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		content.String(),
+		player,
+		help,
+	)
+}
+
+func (m Model) renderEditPlaylist() string {
+	header := m.styles.Header.Render("Edit Playlist")
+	notification := m.renderNotification()
+	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	help := m.renderHelpBar()
+
+	publicText := "Private"
+	if m.editPlaylistIsPublic {
+		publicText = "Public"
+	}
+
+	labelStyle := m.styles.Header.Copy().Padding(0, 1)
+
+	var content strings.Builder
+	content.WriteString(header)
+	content.WriteString("\n\n")
+	content.WriteString(labelStyle.Render("Name:"))
+	content.WriteString("\n")
+	content.WriteString(m.editPlaylistName.View())
+	content.WriteString("\n\n")
+	content.WriteString(labelStyle.Render("Description (optional):"))
+	content.WriteString("\n")
+	content.WriteString(m.editPlaylistDesc.View())
+	content.WriteString("\n\n")
+	content.WriteString(labelStyle.Render("Visibility: " + publicText))
+	content.WriteString("\n")
+	content.WriteString(m.styles.Muted.Render("Press 'p' to toggle public/private, Enter to save, Esc to cancel"))
+
+	if notification != "" {
+		return lipgloss.JoinVertical(lipgloss.Left,
+			content.String(),
+			notification,
+			player,
+			help,
+		)
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		content.String(),
+		player,
+		help,
+	)
+}

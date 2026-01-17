@@ -154,6 +154,64 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.fetchLyrics(trackName, artistName), m.scheduleFetchingTick())
 		}
 		return m, nil
+
+	case key.Matches(msg, m.keys.NewPlaylist):
+		m.prevView = m.view
+		m.view = ViewCreatePlaylist
+		m.createPlaylistName.SetValue("")
+		m.createPlaylistDesc.SetValue("")
+		m.createPlaylistIsPublic = false
+		m.createPlaylistName.Focus()
+		return m, nil
+
+	case key.Matches(msg, m.keys.EditPlaylist):
+		if m.view == ViewPlaylists && m.selectedPlaylist != nil {
+			m.prevView = m.view
+			m.view = ViewEditPlaylist
+			m.editPlaylistName.SetValue(m.selectedPlaylist.Name)
+			m.editPlaylistDesc.SetValue("")
+			m.editPlaylistIsPublic = m.selectedPlaylist.IsPublic
+			m.editPlaylistName.Focus()
+			return m, nil
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keys.DeletePlaylist):
+		if m.view == ViewPlaylists && m.selectedPlaylist != nil {
+			if m.showNotify && m.notifyMsg == "Are you sure? Press 'y' to delete, 'n' to cancel" {
+				return m, nil
+			}
+			m.notifyMsg = "Are you sure? Press 'y' to delete, 'n' to cancel"
+			m.showNotify = true
+			return m, m.scheduleNotifyDismiss()
+		}
+		return m, nil
+
+	case msg.String() == "y":
+		if m.showNotify && m.notifyMsg == "Are you sure? Press 'y' to delete, 'n' to cancel" && m.view == ViewPlaylists && m.selectedPlaylist != nil {
+			return m, m.deletePlaylist(m.selectedPlaylist.ID)
+		}
+		return m, nil
+
+	case msg.String() == "n":
+		if m.showNotify && m.notifyMsg == "Are you sure? Press 'y' to delete, 'n' to cancel" {
+			m.showNotify = false
+			m.notifyMsg = ""
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keys.Follow):
+		if m.view == ViewPlaylists {
+			if item, ok := m.playlists.SelectedItem().(views.PlaylistItem); ok {
+				if item.Playlist.Owner.ID == m.currentUser.ID {
+					m.notifyMsg = "Cannot follow your own playlist"
+					m.showNotify = true
+					return m, m.scheduleNotifyDismiss()
+				}
+				return m, m.followPlaylist(item.Playlist.ID, item.Playlist.Name)
+			}
+		}
+		return m, nil
 	}
 
 	// View-specific keybindings
@@ -184,6 +242,12 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case ViewAddToPlaylist:
 		return m.handleAddToPlaylistKeys(msg)
+
+	case ViewCreatePlaylist:
+		return m.handleCreatePlaylistKeys(msg)
+
+	case ViewEditPlaylist:
+		return m.handleEditPlaylistKeys(msg)
 	}
 
 	return m, nil
@@ -252,6 +316,33 @@ func (m Model) handleTrackKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.prevView = m.view
 			m.view = ViewAddToPlaylist
 			return m, nil
+		}
+	}
+
+	if key.Matches(msg, m.keys.RemoveTrack) {
+		if item, ok := m.tracks.SelectedItem().(views.TrackItem); ok {
+			if m.selectedPlaylist != nil {
+				return m, m.removeTrackFromPlaylist(
+					m.selectedPlaylist.ID,
+					item.Track.Track.ID,
+					item.Track.Track.Name,
+					m.selectedPlaylist.Name,
+				)
+			}
+		}
+	}
+
+	if key.Matches(msg, m.keys.MoveTrackUp) {
+		if m.selectedPlaylist != nil && m.tracks.Index() > 0 {
+			currentIndex := m.tracks.Index()
+			return m, m.reorderPlaylistTracks(m.selectedPlaylist.ID, currentIndex, currentIndex-1)
+		}
+	}
+
+	if key.Matches(msg, m.keys.MoveTrackDown) {
+		if m.selectedPlaylist != nil && m.tracks.Index() < len(m.tracksData)-1 {
+			currentIndex := m.tracks.Index()
+			return m, m.reorderPlaylistTracks(m.selectedPlaylist.ID, currentIndex, currentIndex+2)
 		}
 	}
 
@@ -578,5 +669,57 @@ func (m Model) handleAddToPlaylistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.addToPlaylistList, cmd = m.addToPlaylistList.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleCreatePlaylistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.keys.Enter):
+		if m.createPlaylistName.Value() == "" {
+			m.notifyMsg = "Playlist name cannot be empty"
+			m.showNotify = true
+			return m, m.scheduleNotifyDismiss()
+		}
+		return m, m.createPlaylist(m.createPlaylistName.Value(), m.createPlaylistDesc.Value(), m.createPlaylistIsPublic)
+
+	case msg.String() == "p":
+		m.createPlaylistIsPublic = !m.createPlaylistIsPublic
+		return m, nil
+
+	case key.Matches(msg, m.keys.Back):
+		m.view = m.prevView
+		m.createPlaylistName.Blur()
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	m.createPlaylistName, cmd = m.createPlaylistName.Update(msg)
+	m.createPlaylistDesc, cmd = m.createPlaylistDesc.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleEditPlaylistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.keys.Enter):
+		if m.editPlaylistName.Value() == "" {
+			m.notifyMsg = "Playlist name cannot be empty"
+			m.showNotify = true
+			return m, m.scheduleNotifyDismiss()
+		}
+		return m, m.updatePlaylistDetails(m.selectedPlaylist.ID, m.editPlaylistName.Value(), m.editPlaylistDesc.Value(), m.editPlaylistIsPublic)
+
+	case msg.String() == "p":
+		m.editPlaylistIsPublic = !m.editPlaylistIsPublic
+		return m, nil
+
+	case key.Matches(msg, m.keys.Back):
+		m.view = m.prevView
+		m.editPlaylistName.Blur()
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	m.editPlaylistName, cmd = m.editPlaylistName.Update(msg)
+	m.editPlaylistDesc, cmd = m.editPlaylistDesc.Update(msg)
 	return m, cmd
 }
