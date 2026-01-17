@@ -35,6 +35,15 @@ type KeyMap struct {
 	Like          key.Binding
 	Lyrics        key.Binding
 	AddToPlaylist key.Binding
+
+	// Playlist Management
+	NewPlaylist    key.Binding
+	EditPlaylist   key.Binding
+	DeletePlaylist key.Binding
+	RemoveTrack    key.Binding
+	MoveTrackUp    key.Binding
+	MoveTrackDown  key.Binding
+	Follow         key.Binding
 }
 
 // DefaultKeyMap returns the default keybindings
@@ -144,6 +153,34 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("a"),
 			key.WithHelp("a", "add to playlist"),
 		),
+		NewPlaylist: key.NewBinding(
+			key.WithKeys("N"),
+			key.WithHelp("N", "new playlist"),
+		),
+		EditPlaylist: key.NewBinding(
+			key.WithKeys("E"),
+			key.WithHelp("E", "edit playlist"),
+		),
+		DeletePlaylist: key.NewBinding(
+			key.WithKeys("ctrl+d"),
+			key.WithHelp("ctrl+d", "delete playlist"),
+		),
+		RemoveTrack: key.NewBinding(
+			key.WithKeys("x", "delete"),
+			key.WithHelp("x", "remove track"),
+		),
+		MoveTrackUp: key.NewBinding(
+			key.WithKeys("ctrl+up", "ctrl+k"),
+			key.WithHelp("ctrl+↑", "move up"),
+		),
+		MoveTrackDown: key.NewBinding(
+			key.WithKeys("ctrl+down", "ctrl+j"),
+			key.WithHelp("ctrl+↓", "move down"),
+		),
+		Follow: key.NewBinding(
+			key.WithKeys("F"),
+			key.WithHelp("F", "follow/unfollow"),
+		),
 	}
 }
 
@@ -160,5 +197,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.PlayPause, k.Next, k.Prev, k.SeekBackward, k.SeekForward},
 		{k.VolumeUp, k.VolumeDown, k.Shuffle, k.Repeat},
 		{k.Help, k.Quit, k.Refresh, k.Devices, k.History, k.Artist, k.Like, k.Lyrics, k.AddToPlaylist},
+		{k.NewPlaylist, k.EditPlaylist, k.DeletePlaylist, k.Follow},
+		{k.RemoveTrack, k.MoveTrackUp, k.MoveTrackDown},
 	}
 }
