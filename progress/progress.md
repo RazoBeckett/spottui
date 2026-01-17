@@ -1,5 +1,24 @@
 # SpotTUI Progress Tracker
 
+## Recently Completed (Jan 17, 2026)
+
+- [x] **Playlist editing features** - @razobeckett
+  - Create new playlists with name, description, and public/private toggle (N key)
+  - Edit playlist details (name, description, visibility) (E key in playlist view)
+  - Remove tracks from playlists (x key in track view)
+  - Reorder tracks within playlists (Ctrl+↑/Ctrl+↓ keys)
+  - Follow/unfollow public playlists (F key)
+  - Delete user-owned playlists with confirmation (Ctrl+D + y/n keys)
+  - Added playlist management keybindings section to README
+  - Files modified:
+    - `internal/tui/commands.go` - API commands for playlist operations
+    - `internal/tui/keys.go` - New keybindings (N, E, Ctrl+D, x, Ctrl+↑/Ctrl+↓, F)
+    - `internal/tui/model.go` - New views (ViewCreatePlaylist, ViewEditPlaylist) and fields
+    - `internal/tui/handlers.go` - Handlers for new views and keybindings
+    - `internal/tui/render.go` - Modal UI for create/edit playlist
+    - `README.md` - Updated features list and keybindings
+  - All features tested with `go build`
+
 ## Recently Completed (Jan 16, 2026)
 
 - [x] **Configuration support** - @razobeckett
