@@ -243,6 +243,12 @@ go test ./internal/auth/...
 5. Run `go test ./...` to ensure all tests pass
 6. Submit a pull request
 
-## License
+## Legal
 
-MIT
+- **[Privacy Policy](PRIVACY.md)** - Data collection, storage, and user rights
+- **[User Agreement](USER_AGREEMENT.md)** - Terms of use for using SpotTUI
+- **[License](LICENSE)** - MIT License for this project
+
+### Disclaimer
+
+[Spotify](https://www.spotify.com/) is a trademark of [Spotify AB](https://www.spotify.com/us/about-us/contact/). This project is not affiliated with or endorsed by Spotify.
