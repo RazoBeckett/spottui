@@ -243,6 +243,10 @@ go test ./internal/auth/...
 5. Run `go test ./...` to ensure all tests pass
 6. Submit a pull request
 
+## Disclaimer
+
+[Spotify](https://www.spotify.com/) is a trademark of [Spotify AB](https://www.spotify.com/us/about-us/contact/). This project is not affiliated with or endorsed by Spotify.
+
 ## License
 
 MIT
