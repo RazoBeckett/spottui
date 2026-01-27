@@ -80,7 +80,7 @@ func NewStyles(theme Theme) Styles {
 		Header: lipgloss.NewStyle().
 			Foreground(theme.Primary).
 			Bold(true).
-			Padding(0, 1).
+			Padding(0, 2).
 			MarginBottom(1),
 
 		StatusBar: lipgloss.NewStyle().
@@ -99,18 +99,17 @@ func NewStyles(theme Theme) Styles {
 
 		ListItem: lipgloss.NewStyle().
 			Foreground(theme.Text).
-			PaddingLeft(0),
+			Padding(0, 2),
 
 		ListItemActive: lipgloss.NewStyle().
 			Foreground(theme.Primary).
 			Bold(true).
-			PaddingLeft(0),
+			PaddingLeft(2),
 
 		ListTitle: lipgloss.NewStyle().
 			Foreground(theme.Primary).
 			Bold(true).
-			Padding(0, 1).
-			MarginBottom(1),
+			Padding(0, 0),
 
 		NowPlaying: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -161,7 +160,8 @@ func NewStyles(theme Theme) Styles {
 			Foreground(theme.Primary),
 
 		Muted: lipgloss.NewStyle().
-			Foreground(theme.TextMuted),
+			Foreground(theme.TextMuted).
+			Padding(0, 2),
 
 		ActiveIcon: lipgloss.NewStyle().
 			Foreground(theme.Primary),

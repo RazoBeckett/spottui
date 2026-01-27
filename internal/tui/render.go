@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-
 	"github.com/razobeckett/spottui/internal/tui/views"
 )
 
@@ -75,7 +74,7 @@ func (m Model) renderTracks() string {
 		if m.selectedPlaylist != nil {
 			title = m.selectedPlaylist.Name
 		}
-		titleLine := m.styles.ListItemActive.Render("  " + title)
+		titleLine := m.styles.ListItemActive.Render(title)
 		skeletonCount := (contentHeight - 2) / 2
 		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
 		contentView = titleLine + "\n\n" + skeleton
@@ -115,7 +114,7 @@ func (m Model) renderAlbum() string {
 		if m.selectedAlbum != nil {
 			title = m.selectedAlbum.Name
 		}
-		titleLine := m.styles.ListItemActive.Render("  " + title)
+		titleLine := m.styles.ListItemActive.Render(title)
 		skeletonCount := (contentHeight - 2) / 2
 		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
 		contentView = titleLine + "\n\n" + skeleton
@@ -147,7 +146,7 @@ func (m Model) renderDevices() string {
 
 	var contentView string
 	if m.fetching && len(m.devicesData) == 0 {
-		titleLine := m.styles.ListItemActive.Render("  Devices")
+		titleLine := m.styles.ListItemActive.Render("Devices")
 		skeletonCount := (contentHeight - 2) / 2
 		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
 		contentView = titleLine + "\n\n" + skeleton
@@ -188,7 +187,7 @@ func (m Model) renderSearch() string {
 	if m.hasSearchResults() {
 		contentView = m.searchResults.View()
 	} else if m.searching {
-		titleLine := m.styles.ListItemActive.Render("  Search Results")
+		titleLine := m.styles.ListItemActive.Render("Search Results")
 		skeletonCount := (contentHeight - 2) / 2
 		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
 		contentView = titleLine + "\n\n" + skeleton
@@ -228,7 +227,7 @@ func (m Model) renderHistory() string {
 
 	var contentView string
 	if m.fetching && len(m.historyData) == 0 {
-		titleLine := m.styles.ListItemActive.Render("  Recently Played")
+		titleLine := m.styles.ListItemActive.Render("Recently Played")
 		skeletonCount := (contentHeight - 2) / 2
 		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
 		contentView = titleLine + "\n\n" + skeleton
