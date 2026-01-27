@@ -31,19 +31,19 @@ func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) st
 
 	var shuffleIcon string
 	if state.ShuffleState {
-		shuffleIcon = s.ActiveIcon.Render("⤮")
+		shuffleIcon = s.ActiveIcon.Render("⤮ ")
 	} else {
-		shuffleIcon = s.Muted.Render("⤮")
+		shuffleIcon = s.MutedIcon.Render("⤮ ")
 	}
 
 	var repeatIcon string
 	switch state.RepeatState {
 	case "context":
-		repeatIcon = s.ActiveIcon.Render("⟳")
+		repeatIcon = s.ActiveIcon.Render("⟳ ")
 	case "track":
 		repeatIcon = s.ActiveIcon.Render("⟳₁")
 	default:
-		repeatIcon = s.Muted.Render("⟳")
+		repeatIcon = s.MutedIcon.Render("⟳ ")
 	}
 
 	volumeStr := fmt.Sprintf("   %d%%", state.Device.Volume)
@@ -60,7 +60,7 @@ func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) st
 	title := s.TrackTitle.Render(track.Name)
 	artist := s.TrackArtist.Render(artistStr)
 
-	rightContent := shuffleIcon + " " + repeatIcon + " " + s.Muted.Render(volumeStr)
+	rightContent := shuffleIcon + repeatIcon + s.MutedIcon.Render(volumeStr)
 	rightWidth := lipgloss.Width(rightContent)
 
 	leftContent := lipgloss.JoinHorizontal(lipgloss.Center,

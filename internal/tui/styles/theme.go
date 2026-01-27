@@ -69,6 +69,7 @@ type Styles struct {
 	Spinner    lipgloss.Style
 	Muted      lipgloss.Style
 	ActiveIcon lipgloss.Style
+	MutedIcon  lipgloss.Style
 }
 
 // NewStyles creates styled components from a theme
@@ -108,14 +109,12 @@ func NewStyles(theme Theme) Styles {
 
 		ListTitle: lipgloss.NewStyle().
 			Foreground(theme.Primary).
-			Bold(true).
-			Padding(0, 0),
+			Bold(true),
 
 		NowPlaying: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(theme.Primary).
-			Padding(1, 2).
-			MarginTop(1),
+			Padding(1, 2),
 
 		ProgressBar: lipgloss.NewStyle().
 			Foreground(theme.Primary),
@@ -165,6 +164,9 @@ func NewStyles(theme Theme) Styles {
 
 		ActiveIcon: lipgloss.NewStyle().
 			Foreground(theme.Primary),
+
+		MutedIcon: lipgloss.NewStyle().
+			Foreground(theme.TextMuted),
 	}
 }
 
