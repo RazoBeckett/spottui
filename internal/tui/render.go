@@ -165,12 +165,12 @@ func (m Model) renderDevices() string {
 func (m Model) renderSearch() string {
 	header := m.renderHeader()
 
-	inputStyle := m.styles.Header.Copy().Padding(0, 1)
-	searchBox := inputStyle.Render("  " + m.searchInput.View())
+	inputStyle := m.styles.Header.Copy().Padding(0, 2)
+	searchBox := inputStyle.Render(m.searchInput.View())
 
 	notification := m.renderNotification()
 	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
-	help := m.styles.HelpBar.Render("enter search • ↑/↓ navigate results • esc back")
+	help := m.styles.HelpBar.Render("enter search • ↑/↓ navigate results • shift+s focus search • esc back")
 
 	headerHeight := lipgloss.Height(header)
 	searchBoxHeight := lipgloss.Height(searchBox)
@@ -358,7 +358,7 @@ func (m Model) renderSkeleton(count, width int) string {
 
 func (m Model) renderNotification() string {
 	if m.showError {
-		return m.styles.Error.Render("⚠ " + m.errMsg)
+		return m.styles.Error.Render(" " + m.errMsg)
 	}
 	if m.showNotify {
 		return m.styles.Success.Render(m.notifyMsg)
