@@ -124,8 +124,8 @@ The following environment variables override config file values:
 |-----|--------|
 | `↑` / `k` | Move up |
 | `↓` / `j` | Move down |
-| `←` / `h` | Scroll lyrics up (in lyrics view) |
-| `→` / `l` | Scroll lyrics down (in lyrics view) |
+| `↑` / `k` | Scroll lyrics up (in lyrics view) |
+| `↓` / `j` | Scroll lyrics down (in lyrics view) |
 | `Enter` | Select item |
 | `Esc` / `Backspace` | Go back |
 | `/` | Filter list |
