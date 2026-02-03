@@ -447,7 +447,7 @@ func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg.String() {
-	case "/", "i":
+	case "/":
 		m.searchInput.Focus()
 		return m, textinput.Blink
 	}
