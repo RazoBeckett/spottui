@@ -109,6 +109,11 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.pendingSeek = m.localProgress
 		}
 		m.pendingSeek += 5000
+		if m.playbackState != nil && m.playbackState.Item != nil {
+			if m.pendingSeek > int(m.playbackState.Item.Duration) {
+				m.pendingSeek = int(m.playbackState.Item.Duration)
+			}
+		}
 		m.localProgress = m.pendingSeek
 		m.seekPending = true
 		m.lastSeekRequest = time.Now()
