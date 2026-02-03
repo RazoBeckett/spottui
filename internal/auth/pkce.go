@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"math/big"
 )
 
 // generateCodeVerifier creates a cryptographically random code verifier
@@ -25,10 +26,13 @@ func generateCodeChallenge(verifier string) string {
 // randomString generates a random alphanumeric string of given length
 func randomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, length)
-	rand.Read(b)
-	for i := range b {
-		b[i] = charset[int(b[i])%len(charset)]
+	result := make([]byte, length)
+	for i := range result {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			panic(err) // Crypto rand failure is unrecoverable
+		}
+		result[i] = charset[n.Int64()]
 	}
-	return string(b)
+	return string(result)
 }
