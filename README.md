@@ -9,20 +9,25 @@ A beautiful terminal-based Spotify client built with Go, using the Charmbracelet
 
 ## Features
 
-- **Browse**: Playlists, tracks, albums, and artists
-- **Search**: Global search for tracks, albums, playlists, and artists
-- **History**: Recently played tracks
-- **Lyrics**: View synced and plain lyrics for current track
-- **Playback Controls**: Play/pause, next, previous, volume, shuffle, repeat
-- **Seeking**: Jump forward/backward 5 seconds
-- **Now Playing**: Live display with progress bar and synced lyrics highlighting
-- **Device Management**: Switch playback devices on the fly
-- **Fuzzy Filtering**: Filter playlists and tracks quickly
-- **Vim-style Keybindings**: Efficient keyboard-first navigation
-- **Responsive Layout**: Adapts to terminal size with minimum size warnings
-- **Smart Caching**: TTL-based API caching for faster navigation
-- **Error Handling**: Automatic retry with exponential backoff
-- **Spotify-inspired Theme**: Dark green color scheme
+ - **Browse**: Playlists, tracks, albums, and artists
+ - **Search**: Global search for tracks, albums, playlists, and artists
+ - **History**: Recently played tracks
+ - **Lyrics**: View synced and plain lyrics for current track
+ - **Playback Controls**: Play/pause, next, previous, volume, shuffle, repeat
+ - **Seeking**: Jump forward/backward 5 seconds
+ - **Now Playing**: Live display with progress bar and synced lyrics highlighting
+ - **Device Management**: Switch playback devices on the fly
+ - **Fuzzy Filtering**: Filter playlists and tracks quickly
+ - **Vim-style Keybindings**: Efficient keyboard-first navigation
+ - **Responsive Layout**: Adapts to terminal size with minimum size warnings
+ - **Smart Caching**: TTL-based API caching for faster navigation
+ - **Error Handling**: Automatic retry with exponential backoff
+ - **Spotify-inspired Theme**: Dark green color scheme
+ - **Playlist Creation**: Create new playlists with name, description, and visibility settings
+ - **Track Management**: Remove and reorder tracks within playlists
+ - **Playlist Editing**: Edit playlist details (name, description, public/private)
+ - **Playlist Following**: Follow/unfollow public playlists
+ - **Playlist Deletion**: Delete user-owned playlists with confirmation
 
 ## Prerequisites
 
@@ -153,6 +158,17 @@ The following environment variables override config file values:
 |-----|--------|
 | `l` | Like/Unlike current track |
 | `a` | Add track to playlist |
+
+### Playlist Management
+| Key | Action |
+|-----|--------|
+| `N` | Create new playlist |
+| `E` | Edit playlist details (in playlist view) |
+| `Ctrl+D` | Delete playlist (with confirmation) |
+| `x` | Remove track from playlist |
+| `Ctrl+↑` / `Ctrl+K` | Move track up |
+| `Ctrl+↓` / `Ctrl+J` | Move track down |
+| `F` | Follow/unfollow playlist |
 
 ### General
 | Key | Action |
