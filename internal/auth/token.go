@@ -30,7 +30,15 @@ func (s *TokenStore) Save(token *oauth2.Token) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.path, data, 0600)
+
+	// Write to temp file first
+	tempPath := s.path + ".tmp"
+	if err := os.WriteFile(tempPath, data, 0600); err != nil {
+		return err
+	}
+
+	// Atomically rename temp to target
+	return os.Rename(tempPath, s.path)
 }
 
 // Load retrieves the OAuth token from disk
