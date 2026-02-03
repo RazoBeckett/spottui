@@ -174,7 +174,11 @@ func (a *Authenticator) startCallbackServer(clientChan chan *spotify.Client, err
 		clientChan <- client
 	})
 
-	go srv.ListenAndServe()
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errChan <- err
+		}
+	}()
 	return srv
 }
 
