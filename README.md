@@ -134,6 +134,7 @@ The following environment variables override config file values:
 | `d` | Device selector |
 | `A` | View artist |
 | `L` | Show lyrics |
+| `Tab` | Toggle tabs (in artist view) |
 
 ### Playback
 | Key | Action |
