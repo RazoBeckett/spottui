@@ -1,5 +1,12 @@
 # SpotTUI Progress Tracker
 
+## Recently Completed (Feb 03, 2026)
+
+- [x] **README keybindings documentation** - @razobeckett
+  - Documented Tab key in Navigation keybindings table
+  - Added Tab description: "Toggle tabs (in artist view)"
+  - Matches implementation in `handlers.go` and help text in `render.go`
+
 ## Recently Completed (Jan 16, 2026)
 
 - [x] **Configuration support** - @razobeckett
