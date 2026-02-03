@@ -119,7 +119,10 @@ func (a *Authenticator) authenticateViaBrowser(ctx context.Context) (*spotify.Cl
 
 	fmt.Println("Opening browser for Spotify login...")
 	fmt.Println("If browser doesn't open, visit:", url)
-	openBrowser(url)
+	if err := openBrowser(url); err != nil {
+		fmt.Printf("Failed to open browser: %v\n", err)
+		fmt.Printf("Please manually open this URL in your browser:\n%s\n", url)
+	}
 
 	// Wait for callback
 	select {
@@ -223,7 +226,7 @@ func (s *autoSaveTokenSource) Token() (*oauth2.Token, error) {
 	return token, nil
 }
 
-func openBrowser(url string) {
+func openBrowser(url string) error {
 	var cmd string
 	var args []string
 
@@ -237,9 +240,13 @@ func openBrowser(url string) {
 	case "windows":
 		cmd = "cmd"
 		args = []string{"/c", "start", url}
+	default:
+		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
 
-	if cmd != "" {
-		exec.Command(cmd, args...).Start()
+	if cmd == "" {
+		return fmt.Errorf("no browser command available")
 	}
+
+	return exec.Command(cmd, args...).Start()
 }
