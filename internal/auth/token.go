@@ -2,8 +2,10 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"golang.org/x/oauth2"
 )
@@ -21,24 +23,46 @@ func NewTokenStore() *TokenStore {
 	}
 }
 
-// Save persists the OAuth token to disk
+// Save persists the OAuth token to disk using atomic file operations
 func (s *TokenStore) Save(token *oauth2.Token) error {
 	if err := os.MkdirAll(filepath.Dir(s.path), 0700); err != nil {
-		return err
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 	data, err := json.MarshalIndent(token, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal token: %w", err)
 	}
 
-	// Write to temp file first
+	// Write to temp file first with restricted permissions
 	tempPath := s.path + ".tmp"
 	if err := os.WriteFile(tempPath, data, 0600); err != nil {
-		return err
+		return fmt.Errorf("failed to write temp token file: %w", err)
+	}
+
+	// Ensure temp file is cleaned up if something goes wrong
+	cleanup := func() {
+		_ = os.Remove(tempPath)
+	}
+
+	// Windows doesn't support atomic rename over existing files
+	// Need to remove target first, then rename
+	if runtime.GOOS == "windows" {
+		// Check if target exists and remove it
+		if _, err := os.Stat(s.path); err == nil {
+			if err := os.Remove(s.path); err != nil {
+				cleanup()
+				return fmt.Errorf("failed to remove existing token file: %w", err)
+			}
+		}
 	}
 
 	// Atomically rename temp to target
-	return os.Rename(tempPath, s.path)
+	if err := os.Rename(tempPath, s.path); err != nil {
+		cleanup()
+		return fmt.Errorf("failed to rename token file: %w", err)
+	}
+
+	return nil
 }
 
 // Load retrieves the OAuth token from disk
