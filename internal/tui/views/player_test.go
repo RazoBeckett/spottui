@@ -24,6 +24,7 @@ func createPlayerState(playing bool, progress, duration int, trackName, artistNa
 			},
 		},
 		Device: spotify.PlayerDevice{
+			ID:     "test-device",
 			Volume: spotify.Numeric(volume),
 		},
 		ShuffleState: shuffle,

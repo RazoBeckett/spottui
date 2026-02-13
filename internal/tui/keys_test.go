@@ -17,7 +17,7 @@ func TestDefaultKeyMap(t *testing.T) {
 		{"Up", km.Up, []string{"up", "k"}},
 		{"Down", km.Down, []string{"down", "j"}},
 		{"Left", km.Left, []string{"left", "h"}},
-		{"Right", km.Right, []string{"right", "l"}},
+		{"Right", km.Right, []string{"right"}},
 		{"Enter", km.Enter, []string{"enter"}},
 		{"Back", km.Back, []string{"esc", "backspace"}},
 		{"PlayPause", km.PlayPause, []string{" "}},
