@@ -481,7 +481,7 @@ func (m Model) playAlbumTrack(track spotify.SimpleTrack) tea.Cmd {
 		defer cancel()
 
 		if m.selectedAlbum == nil {
-			return ErrMsg{Err: fmt.Errorf("no album selected")}
+			return ErrMsg{Err: friendlyError(fmt.Errorf("no album selected"))}
 		}
 
 		opts := &spotify.PlayOptions{
