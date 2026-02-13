@@ -336,10 +336,15 @@ func (m Model) prevTrack() tea.Cmd {
 
 func (m Model) volumeUp() tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+		defer cancel()
+
 		state, err := m.client.PlayerState(ctx)
-		if err != nil || state == nil || state.Device.ID == "" {
-			return nil
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+		if state == nil || state.Device.ID == "" {
+			return ErrMsg{Err: fmt.Errorf("no active playback device")}
 		}
 
 		newVol := int(state.Device.Volume) + 10
@@ -347,17 +352,24 @@ func (m Model) volumeUp() tea.Cmd {
 			newVol = 100
 		}
 
-		m.client.Volume(ctx, newVol)
+		if err := m.client.Volume(ctx, newVol); err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
 		return VolumeChangedMsg{Volume: newVol}
 	}
 }
 
 func (m Model) volumeDown() tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+		defer cancel()
+
 		state, err := m.client.PlayerState(ctx)
-		if err != nil || state == nil || state.Device.ID == "" {
-			return nil
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+		if state == nil || state.Device.ID == "" {
+			return ErrMsg{Err: fmt.Errorf("no active playback device")}
 		}
 
 		newVol := int(state.Device.Volume) - 10
@@ -365,7 +377,9 @@ func (m Model) volumeDown() tea.Cmd {
 			newVol = 0
 		}
 
-		m.client.Volume(ctx, newVol)
+		if err := m.client.Volume(ctx, newVol); err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
 		return VolumeChangedMsg{Volume: newVol}
 	}
 }
