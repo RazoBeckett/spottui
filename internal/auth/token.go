@@ -44,19 +44,27 @@ func (s *TokenStore) Save(token *oauth2.Token) error {
 		_ = os.Remove(tempPath)
 	}
 
-	// Windows doesn't support atomic rename over existing files
-	// Need to remove target first, then rename
 	if runtime.GOOS == "windows" {
-		// Check if target exists and remove it
+		backupPath := s.path + ".bak"
+
 		if _, err := os.Stat(s.path); err == nil {
-			if err := os.Remove(s.path); err != nil {
+			_ = os.Remove(backupPath)
+			if err := os.Rename(s.path, backupPath); err != nil {
 				cleanup()
-				return fmt.Errorf("failed to remove existing token file: %w", err)
+				return fmt.Errorf("failed to backup existing token file: %w", err)
 			}
 		}
+
+		if err := os.Rename(tempPath, s.path); err != nil {
+			_ = os.Rename(backupPath, s.path)
+			cleanup()
+			return fmt.Errorf("failed to rename token file: %w", err)
+		}
+
+		_ = os.Remove(backupPath)
+		return nil
 	}
 
-	// Atomically rename temp to target
 	if err := os.Rename(tempPath, s.path); err != nil {
 		cleanup()
 		return fmt.Errorf("failed to rename token file: %w", err)
