@@ -344,7 +344,7 @@ func (m Model) volumeUp() tea.Cmd {
 			return ErrMsg{Err: friendlyError(err)}
 		}
 		if state == nil || state.Device.ID == "" {
-			return ErrMsg{Err: fmt.Errorf("no active playback device")}
+			return ErrMsg{Err: friendlyError(fmt.Errorf("no active playback device"))}
 		}
 
 		newVol := int(state.Device.Volume) + 10
@@ -369,7 +369,7 @@ func (m Model) volumeDown() tea.Cmd {
 			return ErrMsg{Err: friendlyError(err)}
 		}
 		if state == nil || state.Device.ID == "" {
-			return ErrMsg{Err: fmt.Errorf("no active playback device")}
+			return ErrMsg{Err: friendlyError(fmt.Errorf("no active playback device"))}
 		}
 
 		newVol := int(state.Device.Volume) - 10
@@ -389,8 +389,11 @@ func (m Model) toggleShuffle() tea.Cmd {
 		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
 		defer cancel()
 		state, err := m.client.PlayerState(ctx)
-		if err != nil || state == nil {
-			return ErrMsg{Err: fmt.Errorf("no active playback device")}
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+		if state == nil {
+			return ErrMsg{Err: friendlyError(fmt.Errorf("no active playback device"))}
 		}
 
 		newState := !state.ShuffleState
@@ -407,8 +410,11 @@ func (m Model) cycleRepeat() tea.Cmd {
 		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
 		defer cancel()
 		state, err := m.client.PlayerState(ctx)
-		if err != nil || state == nil {
-			return ErrMsg{Err: fmt.Errorf("no active playback device")}
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+		if state == nil {
+			return ErrMsg{Err: friendlyError(fmt.Errorf("no active playback device"))}
 		}
 
 		var newState string

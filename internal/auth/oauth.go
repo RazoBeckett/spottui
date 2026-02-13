@@ -249,9 +249,5 @@ func openBrowser(url string) error {
 		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
 
-	if cmd == "" {
-		return fmt.Errorf("no browser command available")
-	}
-
 	return exec.Command(cmd, args...).Start()
 }
