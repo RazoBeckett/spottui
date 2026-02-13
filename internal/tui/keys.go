@@ -53,8 +53,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("←/h", "left"),
 		),
 		Right: key.NewBinding(
-			key.WithKeys("right"),
-			key.WithHelp("→", "right"),
+			key.WithKeys("right", "l"),
+			key.WithHelp("→/l", "right"),
 		),
 		Enter: key.NewBinding(
 			key.WithKeys("enter"),
