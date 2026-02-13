@@ -72,11 +72,16 @@ func NewAuthenticator(clientID, redirectURI string) (*Authenticator, error) {
 		Scopes:      scopes,
 	}
 
+	state, err := randomString(16)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate state: %w", err)
+	}
+
 	return &Authenticator{
 		auth:         auth,
 		oauth2Config: oauth2Cfg,
 		codeVerifier: verifier,
-		state:        randomString(16),
+		state:        state,
 		tokenStore:   NewTokenStore(),
 		redirectURI:  redirectURI,
 	}, nil

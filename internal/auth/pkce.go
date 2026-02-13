@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"math/big"
 )
 
@@ -24,15 +25,15 @@ func generateCodeChallenge(verifier string) string {
 }
 
 // randomString generates a random alphanumeric string of given length
-func randomString(length int) string {
+func randomString(length int) (string, error) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	result := make([]byte, length)
 	for i := range result {
 		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
 		if err != nil {
-			panic(err) // Crypto rand failure is unrecoverable
+			return "", fmt.Errorf("failed to generate random string: %w", err)
 		}
 		result[i] = charset[n.Int64()]
 	}
-	return string(result)
+	return string(result), nil
 }
