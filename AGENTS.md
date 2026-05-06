@@ -1,38 +1,35 @@
-# AGENTS.md - SpotTUI
-
-## Project Overview
+## Project Snapshot
 
 SpotTUI is a terminal-based Spotify client built with Go 1.25+ using the Charmbracelet TUI ecosystem. It provides playlist browsing, playback controls, search, and device management through a Spotify-themed terminal interface.
 
+This repository is a VERY EARLY WIP. Proposing sweeping changes that improve long-term maintainability is encouraged.
+
+## Core Priorities
+
+1. Performance first.
+2. Reliability first.
+3. Keep behavior predictable under load and during failures (session restarts, reconnects, partial streams).
+
+If a tradeoff is required, choose correctness and robustness over short-term convenience.
+
+## Maintainability
+
+Long term maintainability is a core priority. If you add new functionality, first check if there is shared logic that can be extracted to a separate module. Duplicate logic across multiple files is a code smell and should be avoided. Don't be afraid to change existing code. Don't take shortcuts by just adding local logic to solve a problem.
+
 ## Tech Stack
 
-- **Language**: Go 1.25.5
-- **TUI Framework**: Bubble Tea (Elm architecture)
+- **TUI Framework**: Bubble Tea v2
 - **Styling**: Lip Gloss
 - **Components**: Bubbles (lists, spinners, text inputs)
 - **Spotify API**: zmb3/spotify/v2
 - **Auth**: OAuth 2.0 PKCE flow (no client secret required)
 
-## Architecture
+## Reference Repos
 
-```
-spottui/
-├── main.go                      # Entry point, env loading, auth init
-├── internal/
-│   ├── auth/                    # Authentication layer
-│   │   ├── oauth.go             # PKCE OAuth flow, browser auth
-│   │   ├── pkce.go              # Code verifier/challenge generation
-│   │   └── token.go             # Token persistence (~/.config/spottui/)
-│   └── tui/                     # Terminal UI layer
-│       ├── model.go             # Root Bubble Tea model, Update/View
-│       ├── commands.go          # Async tea.Cmd functions (API calls)
-│       ├── keys.go              # KeyMap definitions
-│       ├── styles/
-│       │   └── theme.go         # Spotify-themed Lip Gloss styles
-│       └── views/
-│           ├── list.go          # List delegates (playlist, track, device, search)
-│           └── player.go        # Now playing component with progress bar
-```
+- spotify_player: https://github.com/aome510/spotify-player (prefered resource)
+- spotify-tui: https://github.com/Rigellute/spotify-tui
+
+Use these as implementation references when designing protocol handling, UX flows, and operational safeguards.
 
 ## Key Patterns
 
@@ -120,73 +117,3 @@ This project currently has no test files. When adding tests:
 1. Create Item struct implementing `list.Item` interface in `views/list.go`
 2. Create Delegate struct with `Render` method
 3. Create `Create*List` factory function
-
-## Keybindings Reference
-
-Defined in `keys.go`. Key groups:
-- Navigation: arrows, hjkl, enter, esc
-- Playback: space, n/p, +/-, s, r
-- App: ?, q, ctrl+r, S, H, d
-
-## Commit Convention
-
-This project uses [Conventional Commits](https://www.conventionalcommits.org/). Format:
-
-```
-<type>(<optional scope>): <description>
-
-<optional body>
-
-<optional footer>
-```
-
-### Types
-
-| Type | Description |
-|------|-------------|
-| `feat` | New feature or feature change |
-| `fix` | Bug fix |
-| `refactor` | Code restructure without behavior change |
-| `perf` | Performance improvement (special refactor) |
-| `style` | Code style changes (formatting, whitespace) |
-| `test` | Add or fix tests |
-| `docs` | Documentation only |
-| `build` | Build system, dependencies, version bumps |
-| `chore` | Maintenance tasks (.gitignore, init, etc.) |
-
-### Rules
-
-- Use imperative, present tense: "add" not "added" or "adds"
-- Do not capitalize first letter of description
-- No period at end of description
-- Breaking changes: add `!` before `:` (e.g., `feat!: remove endpoint`)
-- **Always run `git status` before any git operations**
-- **Never delete files without explicit permission**
-- **Always update `progress/` directory** when completing features, fixing bugs, or resolving tech debt (see format below)
-
-### Progress Tracking
-
-When documenting completed work in `progress/` files, include:
-
-- **What was implemented/fixed**
-- **Date completed** (use `Mon DD, YYYY` format)
-- **Who worked on it** (@username)
-- **Technical details** (files changed, approach used)
-- **Metrics or outcomes** (if applicable)
-
-Files to update:
-- `progress/progress.md` — Main progress tracker (completed tasks, in-progress items)
-- `progress/bugs-and-issues.md` — Bug tracking (mark fixed with solution description)
-- `progress/tech-debt.md` — Technical debt (mark resolved or update progress)
-- `progress/temporary-decisions.md` — Resolved technical decisions
-- `progress/deployment-log.md` — Deployment history with version numbers
-
-### Examples
-
-```
-feat: add email notifications on new direct messages
-fix(auth): prevent token refresh loop on expired sessions
-refactor: implement fibonacci as recursion
-build: update dependencies
-chore: init
-```
