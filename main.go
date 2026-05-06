@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/razobeckett/spottui/internal/auth"
 	"github.com/razobeckett/spottui/internal/config"
@@ -56,7 +56,7 @@ func main() {
 
 	// Create and run TUI
 	model := tui.NewModel(client, &cfg)
-	p := tea.NewProgram(model, tea.WithAltScreen())
+	p := tea.NewProgram(model)
 
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error running app: %v\n", err)

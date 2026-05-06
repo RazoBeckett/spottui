@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/zmb3/spotify/v2"
 
 	"github.com/razobeckett/spottui/internal/tui/styles"

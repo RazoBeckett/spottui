@@ -4,14 +4,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/razobeckett/spottui/internal/tui/views"
 )
 
-func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.view == ViewSearch && m.searchInput.Focused() {
 		return m.handleSearchKeys(msg)
 	}
@@ -194,7 +194,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handlePlaylistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handlePlaylistKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Enter) {
 		if len(m.playlists.Items()) == 0 {
 			return m, nil
@@ -222,7 +222,7 @@ func (m Model) handlePlaylistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) handleTrackKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleTrackKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Enter) {
 		if len(m.tracks.Items()) > 0 {
 			if item, ok := m.tracks.SelectedItem().(views.TrackItem); ok {
@@ -276,7 +276,7 @@ func (m Model) handleTrackKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) handleAlbumKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleAlbumKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Enter) {
 		if len(m.albumTracks.Items()) > 0 {
 			if item, ok := m.albumTracks.SelectedItem().(views.AlbumTrackItem); ok {
@@ -330,7 +330,7 @@ func (m Model) handleAlbumKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) handleDeviceKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleDeviceKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Enter) {
 		if len(m.devices.Items()) > 0 {
 			if item, ok := m.devices.SelectedItem().(views.DeviceItem); ok {
@@ -345,7 +345,7 @@ func (m Model) handleDeviceKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.searchInput.Focused() {
 		switch msg.String() {
 		case "esc", "q":
@@ -470,7 +470,7 @@ func (m Model) hasSearchResults() bool {
 	return len(m.searchTracksData) > 0 || len(m.searchAlbumsData) > 0 || len(m.searchPlaylistsData) > 0 || len(m.searchArtistsData) > 0
 }
 
-func (m Model) handleHistoryKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleHistoryKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Enter) {
 		if len(m.historyTracks.Items()) > 0 {
 			if item, ok := m.historyTracks.SelectedItem().(views.AlbumTrackItem); ok {
@@ -524,7 +524,7 @@ func (m Model) handleHistoryKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) handleLyricsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleLyricsKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	lines := strings.Split(m.lyricsData, "\n")
 	visibleHeight := m.height - 6
 
@@ -542,7 +542,7 @@ func (m Model) handleLyricsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleArtistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleArtistKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Back) {
 		m.view = m.prevView
 		return m, nil
@@ -618,7 +618,7 @@ func (m Model) handleArtistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) handleAddToPlaylistKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleAddToPlaylistKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Enter) {
 		if len(m.addToPlaylistList.Items()) > 0 {
 			if item, ok := m.addToPlaylistList.SelectedItem().(views.PlaylistItem); ok {

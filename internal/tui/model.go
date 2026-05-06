@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 	"github.com/zmb3/spotify/v2"
 
 	"github.com/razobeckett/spottui/internal/config"
@@ -130,7 +130,7 @@ func NewModel(client *spotify.Client, cfg *config.Config) Model {
 	ti := textinput.New()
 	ti.Placeholder = "Search tracks..."
 	ti.CharLimit = 100
-	ti.Width = 40
+	ti.SetWidth(40)
 
 	return Model{
 		view:        ViewLoading,
@@ -158,7 +158,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if m.view == ViewPlaylists && m.playlists.FilterState() == list.Filtering {
 			var cmd tea.Cmd
 			m.playlists, cmd = m.playlists.Update(msg)
@@ -438,7 +438,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View renders the UI
-func (m Model) View() string {
+func (m Model) View() tea.View {
+	v := tea.NewView(m.renderContent())
+	v.AltScreen = true
+	return v
+}
+
+func (m Model) renderContent() string {
 	if m.width < MinWidth || m.height < MinHeight {
 		return m.renderTooSmall()
 	}

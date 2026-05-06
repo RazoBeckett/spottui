@@ -1,40 +1,44 @@
 package styles
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"image/color"
+
+	"charm.land/lipgloss/v2"
+)
 
 // Theme defines the complete color scheme for the application
 type Theme struct {
 	// Primary colors
-	Primary   lipgloss.AdaptiveColor
-	Secondary lipgloss.AdaptiveColor
-	Accent    lipgloss.AdaptiveColor
+	Primary   color.Color
+	Secondary color.Color
+	Accent    color.Color
 
 	// Semantic colors
-	Success lipgloss.AdaptiveColor
-	Warning lipgloss.AdaptiveColor
-	Error   lipgloss.AdaptiveColor
+	Success color.Color
+	Warning color.Color
+	Error   color.Color
 
 	// UI colors
-	Background lipgloss.AdaptiveColor
-	Surface    lipgloss.AdaptiveColor
-	Border     lipgloss.AdaptiveColor
-	Text       lipgloss.AdaptiveColor
-	TextMuted  lipgloss.AdaptiveColor
+	Background color.Color
+	Surface    color.Color
+	Border     color.Color
+	Text       color.Color
+	TextMuted  color.Color
 }
 
-// SpotifyTheme is a Spotify-inspired color scheme
+// SpotifyTheme is a Spotify-inspired color scheme (dark variant)
 var SpotifyTheme = Theme{
-	Primary:    lipgloss.AdaptiveColor{Light: "#1DB954", Dark: "#1DB954"}, // Spotify green
-	Secondary:  lipgloss.AdaptiveColor{Light: "#191414", Dark: "#FFFFFF"},
-	Accent:     lipgloss.AdaptiveColor{Light: "#1ED760", Dark: "#1ED760"},
-	Success:    lipgloss.AdaptiveColor{Light: "#1DB954", Dark: "#1DB954"},
-	Warning:    lipgloss.AdaptiveColor{Light: "#F59B23", Dark: "#F59B23"},
-	Error:      lipgloss.AdaptiveColor{Light: "#E91429", Dark: "#E91429"},
-	Background: lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#121212"},
-	Surface:    lipgloss.AdaptiveColor{Light: "#F8F8F8", Dark: "#282828"},
-	Border:     lipgloss.AdaptiveColor{Light: "#E0E0E0", Dark: "#404040"},
-	Text:       lipgloss.AdaptiveColor{Light: "#191414", Dark: "#FFFFFF"},
-	TextMuted:  lipgloss.AdaptiveColor{Light: "#6A6A6A", Dark: "#B3B3B3"},
+	Primary:    lipgloss.Color("#1DB954"), // Spotify green
+	Secondary:  lipgloss.Color("#FFFFFF"),
+	Accent:     lipgloss.Color("#1ED760"),
+	Success:    lipgloss.Color("#1DB954"),
+	Warning:    lipgloss.Color("#F59B23"),
+	Error:      lipgloss.Color("#E91429"),
+	Background: lipgloss.Color("#121212"),
+	Surface:    lipgloss.Color("#282828"),
+	Border:     lipgloss.Color("#404040"),
+	Text:       lipgloss.Color("#FFFFFF"),
+	TextMuted:  lipgloss.Color("#B3B3B3"),
 }
 
 // Styles contains all UI component styles
