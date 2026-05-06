@@ -119,7 +119,7 @@ func (m Model) fetchInitialData() tea.Cmd {
 
 			allPlaylists = append(allPlaylists, playlists.Playlists...)
 
-			if len(playlists.Playlists) < limit {
+			if offset+len(playlists.Playlists) >= int(playlists.Total) {
 				break
 			}
 			offset += limit
@@ -163,7 +163,7 @@ func (m Model) fetchTracks(playlistID spotify.ID) tea.Cmd {
 
 			allTracks = append(allTracks, tracks.Tracks...)
 
-			if len(tracks.Tracks) < limit {
+			if offset+len(tracks.Tracks) >= int(tracks.Total) {
 				break
 			}
 			offset += limit
@@ -198,7 +198,7 @@ func (m Model) fetchLikedTracks() tea.Cmd {
 				})
 			}
 
-			if len(saved.Tracks) < limit {
+			if offset+len(saved.Tracks) >= int(saved.Total) {
 				break
 			}
 			offset += limit
@@ -232,7 +232,7 @@ func (m Model) fetchAlbumTracks(albumID spotify.ID) tea.Cmd {
 
 			allTracks = append(allTracks, tracks.Tracks...)
 
-			if len(tracks.Tracks) < limit {
+			if offset+len(tracks.Tracks) >= int(tracks.Total) {
 				break
 			}
 			offset += limit
@@ -291,11 +291,12 @@ func (m *Model) stopFetching() {
 
 func (m Model) togglePlayback() tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+		defer cancel()
 
 		state, err := m.client.PlayerState(ctx)
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
 		if state != nil && state.Playing {
@@ -305,11 +306,10 @@ func (m Model) togglePlayback() tea.Cmd {
 		}
 
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
-		// Refresh state after a short delay
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		return PollPlaybackMsg{}
 	}
 }
@@ -336,10 +336,15 @@ func (m Model) prevTrack() tea.Cmd {
 
 func (m Model) volumeUp() tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+		defer cancel()
+
 		state, err := m.client.PlayerState(ctx)
-		if err != nil || state == nil {
-			return nil
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+		if state == nil || state.Device.ID == "" {
+			return ErrMsg{Err: friendlyError(fmt.Errorf("no active playback device"))}
 		}
 
 		newVol := int(state.Device.Volume) + 10
@@ -347,17 +352,24 @@ func (m Model) volumeUp() tea.Cmd {
 			newVol = 100
 		}
 
-		m.client.Volume(ctx, newVol)
+		if err := m.client.Volume(ctx, newVol); err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
 		return VolumeChangedMsg{Volume: newVol}
 	}
 }
 
 func (m Model) volumeDown() tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+		defer cancel()
+
 		state, err := m.client.PlayerState(ctx)
-		if err != nil || state == nil {
-			return nil
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+		if state == nil || state.Device.ID == "" {
+			return ErrMsg{Err: friendlyError(fmt.Errorf("no active playback device"))}
 		}
 
 		newVol := int(state.Device.Volume) - 10
@@ -365,23 +377,29 @@ func (m Model) volumeDown() tea.Cmd {
 			newVol = 0
 		}
 
-		m.client.Volume(ctx, newVol)
+		if err := m.client.Volume(ctx, newVol); err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
 		return VolumeChangedMsg{Volume: newVol}
 	}
 }
 
 func (m Model) toggleShuffle() tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+		defer cancel()
 		state, err := m.client.PlayerState(ctx)
-		if err != nil || state == nil {
-			return nil
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+		if state == nil {
+			return ErrMsg{Err: friendlyError(fmt.Errorf("no active playback device"))}
 		}
 
 		newState := !state.ShuffleState
 		err = m.client.Shuffle(ctx, newState)
 		if err != nil {
-			return PollPlaybackMsg{}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 		return ShuffleToggledMsg{NewState: newState}
 	}
@@ -389,10 +407,14 @@ func (m Model) toggleShuffle() tea.Cmd {
 
 func (m Model) cycleRepeat() tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+		defer cancel()
 		state, err := m.client.PlayerState(ctx)
-		if err != nil || state == nil {
-			return nil
+		if err != nil {
+			return ErrMsg{Err: friendlyError(err)}
+		}
+		if state == nil {
+			return ErrMsg{Err: friendlyError(fmt.Errorf("no active playback device"))}
 		}
 
 		var newState string
@@ -407,7 +429,7 @@ func (m Model) cycleRepeat() tea.Cmd {
 
 		err = m.client.Repeat(ctx, newState)
 		if err != nil {
-			return PollPlaybackMsg{}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 		return RepeatCycledMsg{NewState: newState}
 	}
@@ -421,9 +443,10 @@ func (m Model) scheduleSeekTick() tea.Cmd {
 
 func (m Model) executeSeek(position int) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+		defer cancel()
 		if err := m.client.Seek(ctx, position); err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 		return PollPlaybackMsg{}
 	}
@@ -431,7 +454,8 @@ func (m Model) executeSeek(position int) tea.Cmd {
 
 func (m Model) playTrack(track spotify.PlaylistTrack) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
 
 		var opts *spotify.PlayOptions
 
@@ -449,20 +473,21 @@ func (m Model) playTrack(track spotify.PlaylistTrack) tea.Cmd {
 		}
 
 		if err := m.client.PlayOpt(ctx, opts); err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		return PollPlaybackMsg{}
 	}
 }
 
 func (m Model) playAlbumTrack(track spotify.SimpleTrack) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
 
 		if m.selectedAlbum == nil {
-			return nil
+			return ErrMsg{Err: friendlyError(fmt.Errorf("no album selected"))}
 		}
 
 		opts := &spotify.PlayOptions{
@@ -473,10 +498,10 @@ func (m Model) playAlbumTrack(track spotify.SimpleTrack) tea.Cmd {
 		}
 
 		if err := m.client.PlayOpt(ctx, opts); err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		return PollPlaybackMsg{}
 	}
 }
@@ -499,14 +524,15 @@ func (m Model) fetchDevices() tea.Cmd {
 
 func (m Model) transferPlayback(deviceID spotify.ID) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
 
 		err := m.client.TransferPlayback(ctx, deviceID, true)
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 		return PollPlaybackMsg{}
 	}
 }
@@ -556,11 +582,12 @@ func (m Model) searchTracks(query string) tea.Cmd {
 
 func (m Model) playSearchTrack(track spotify.FullTrack) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
 
 		devices, err := m.client.PlayerDevices(ctx)
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
 		var activeDeviceID *spotify.ID
@@ -574,9 +601,9 @@ func (m Model) playSearchTrack(track spotify.FullTrack) tea.Cmd {
 		if activeDeviceID == nil && len(devices) > 0 {
 			activeDeviceID = &devices[0].ID
 			if err := m.client.TransferPlayback(ctx, *activeDeviceID, false); err != nil {
-				return ErrMsg{Err: err}
+				return ErrMsg{Err: friendlyError(err)}
 			}
-			time.Sleep(300 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 		}
 
 		if activeDeviceID == nil {
@@ -589,21 +616,22 @@ func (m Model) playSearchTrack(track spotify.FullTrack) tea.Cmd {
 		}
 
 		if err := m.client.PlayOpt(ctx, opts); err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		return PollPlaybackMsg{}
 	}
 }
 
 func (m Model) playSearchItem(item views.SearchItem) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
 
 		devices, err := m.client.PlayerDevices(ctx)
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
 		var activeDeviceID *spotify.ID
@@ -617,9 +645,9 @@ func (m Model) playSearchItem(item views.SearchItem) tea.Cmd {
 		if activeDeviceID == nil && len(devices) > 0 {
 			activeDeviceID = &devices[0].ID
 			if err := m.client.TransferPlayback(ctx, *activeDeviceID, false); err != nil {
-				return ErrMsg{Err: err}
+				return ErrMsg{Err: friendlyError(err)}
 			}
-			time.Sleep(300 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 		}
 
 		if activeDeviceID == nil {
@@ -646,10 +674,10 @@ func (m Model) playSearchItem(item views.SearchItem) tea.Cmd {
 		}
 
 		if err := m.client.PlayOpt(ctx, opts); err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		return PollPlaybackMsg{}
 	}
 }
@@ -672,11 +700,12 @@ func (m Model) fetchRecentlyPlayed() tea.Cmd {
 
 func (m Model) playHistoryTrack(track spotify.SimpleTrack) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
 
 		devices, err := m.client.PlayerDevices(ctx)
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
 		var activeDeviceID *spotify.ID
@@ -690,9 +719,9 @@ func (m Model) playHistoryTrack(track spotify.SimpleTrack) tea.Cmd {
 		if activeDeviceID == nil && len(devices) > 0 {
 			activeDeviceID = &devices[0].ID
 			if err := m.client.TransferPlayback(ctx, *activeDeviceID, false); err != nil {
-				return ErrMsg{Err: err}
+				return ErrMsg{Err: friendlyError(err)}
 			}
-			time.Sleep(300 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 		}
 
 		if activeDeviceID == nil {
@@ -705,10 +734,10 @@ func (m Model) playHistoryTrack(track spotify.SimpleTrack) tea.Cmd {
 		}
 
 		if err := m.client.PlayOpt(ctx, opts); err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		return PollPlaybackMsg{}
 	}
 }
@@ -752,7 +781,7 @@ func (m Model) fetchArtist(artistID spotify.ID) tea.Cmd {
 
 			allAlbums = append(allAlbums, albums.Albums...)
 
-			if len(albums.Albums) < limit {
+			if offset+len(albums.Albums) >= int(albums.Total) {
 				break
 			}
 			offset += limit
@@ -770,11 +799,12 @@ func (m Model) fetchArtist(artistID spotify.ID) tea.Cmd {
 
 func (m Model) playArtistTopTrack(track spotify.FullTrack) tea.Cmd {
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
+		defer cancel()
 
 		devices, err := m.client.PlayerDevices(ctx)
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
 		var activeDeviceID *spotify.ID
@@ -788,9 +818,9 @@ func (m Model) playArtistTopTrack(track spotify.FullTrack) tea.Cmd {
 		if activeDeviceID == nil && len(devices) > 0 {
 			activeDeviceID = &devices[0].ID
 			if err := m.client.TransferPlayback(ctx, *activeDeviceID, false); err != nil {
-				return ErrMsg{Err: err}
+				return ErrMsg{Err: friendlyError(err)}
 			}
-			time.Sleep(300 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 		}
 
 		if activeDeviceID == nil {
@@ -803,10 +833,10 @@ func (m Model) playArtistTopTrack(track spotify.FullTrack) tea.Cmd {
 		}
 
 		if err := m.client.PlayOpt(ctx, opts); err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg{Err: friendlyError(err)}
 		}
 
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		return PollPlaybackMsg{}
 	}
 }

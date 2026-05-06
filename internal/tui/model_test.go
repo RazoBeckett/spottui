@@ -264,7 +264,7 @@ func TestUpdateDismissErrorMsg(t *testing.T) {
 func TestUpdateVolumeChangedMsg(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.playbackState = &spotify.PlayerState{
-		Device: spotify.PlayerDevice{Volume: 50},
+		Device: spotify.PlayerDevice{ID: "test-device", Volume: 50},
 	}
 
 	msg := VolumeChangedMsg{Volume: 75}

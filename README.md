@@ -124,8 +124,6 @@ The following environment variables override config file values:
 |-----|--------|
 | `↑` / `k` | Move up |
 | `↓` / `j` | Move down |
-| `←` / `h` | Scroll lyrics up (in lyrics view) |
-| `→` / `l` | Scroll lyrics down (in lyrics view) |
 | `Enter` | Select item |
 | `Esc` / `Backspace` | Go back |
 | `/` | Filter list |
@@ -134,6 +132,14 @@ The following environment variables override config file values:
 | `d` | Device selector |
 | `A` | View artist |
 | `L` | Show lyrics |
+| `Tab` | Toggle tabs (in artist view) |
+
+### Lyrics View (context-specific overrides)
+When the lyrics view is active, the navigation keys have special behavior:
+| Key | Action |
+|-----|--------|
+| `↑` / `k` | Scroll lyrics up |
+| `↓` / `j` | Scroll lyrics down |
 
 ### Playback
 | Key | Action |

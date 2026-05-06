@@ -46,11 +46,17 @@ func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) st
 		repeatIcon = s.MutedIcon.Render("⟳ ")
 	}
 
-	volumeStr := fmt.Sprintf("   %d%%", state.Device.Volume)
+	volumeStr := ""
+	if state.Device.ID != "" {
+		volumeStr = fmt.Sprintf("   %d%%", state.Device.Volume)
+	}
 
 	availableWidth := max(width-8, 30)
 	progressWidth := max(availableWidth-14, 10)
-	progress := float64(state.Progress) / float64(track.Duration)
+	var progress float64
+	if track.Duration > 0 {
+		progress = float64(state.Progress) / float64(track.Duration)
+	}
 	progressBar := renderProgressBar(progress, progressWidth, s)
 
 	currentTime := formatDuration(int(state.Progress))

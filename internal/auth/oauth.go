@@ -72,11 +72,16 @@ func NewAuthenticator(clientID, redirectURI string) (*Authenticator, error) {
 		Scopes:      scopes,
 	}
 
+	state, err := randomString(16)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate state: %w", err)
+	}
+
 	return &Authenticator{
 		auth:         auth,
 		oauth2Config: oauth2Cfg,
 		codeVerifier: verifier,
-		state:        randomString(16),
+		state:        state,
 		tokenStore:   NewTokenStore(),
 		redirectURI:  redirectURI,
 	}, nil
@@ -119,7 +124,10 @@ func (a *Authenticator) authenticateViaBrowser(ctx context.Context) (*spotify.Cl
 
 	fmt.Println("Opening browser for Spotify login...")
 	fmt.Println("If browser doesn't open, visit:", url)
-	openBrowser(url)
+	if err := openBrowser(url); err != nil {
+		fmt.Printf("Failed to open browser: %v\n", err)
+		fmt.Printf("Please manually open this URL in your browser:\n%s\n", url)
+	}
 
 	// Wait for callback
 	select {
@@ -174,7 +182,11 @@ func (a *Authenticator) startCallbackServer(clientChan chan *spotify.Client, err
 		clientChan <- client
 	})
 
-	go srv.ListenAndServe()
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errChan <- err
+		}
+	}()
 	return srv
 }
 
@@ -219,7 +231,7 @@ func (s *autoSaveTokenSource) Token() (*oauth2.Token, error) {
 	return token, nil
 }
 
-func openBrowser(url string) {
+func openBrowser(url string) error {
 	var cmd string
 	var args []string
 
@@ -233,9 +245,9 @@ func openBrowser(url string) {
 	case "windows":
 		cmd = "cmd"
 		args = []string{"/c", "start", url}
+	default:
+		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
 
-	if cmd != "" {
-		exec.Command(cmd, args...).Start()
-	}
+	return exec.Command(cmd, args...).Start()
 }

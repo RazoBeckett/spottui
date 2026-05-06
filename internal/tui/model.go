@@ -174,6 +174,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.albumTracks, cmd = m.albumTracks.Update(msg)
 			return m, cmd
 		}
+		if m.view == ViewHistory && m.historyTracks.FilterState() == list.Filtering {
+			var cmd tea.Cmd
+			m.historyTracks, cmd = m.historyTracks.Update(msg)
+			return m, cmd
+		}
+		if m.view == ViewArtist && m.artistAlbums.FilterState() == list.Filtering {
+			var cmd tea.Cmd
+			m.artistAlbums, cmd = m.artistAlbums.Update(msg)
+			return m, cmd
+		}
+		if m.view == ViewAddToPlaylist && m.addToPlaylistList.FilterState() == list.Filtering {
+			var cmd tea.Cmd
+			m.addToPlaylistList, cmd = m.addToPlaylistList.Update(msg)
+			return m, cmd
+		}
 		return m.handleKeyPress(msg)
 
 	case tea.WindowSizeMsg:
@@ -346,7 +361,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case VolumeChangedMsg:
-		if m.playbackState != nil {
+		if m.playbackState != nil && m.playbackState.Device.ID != "" {
 			m.playbackState.Device.Volume = spotify.Numeric(msg.Volume)
 		}
 		return m, nil

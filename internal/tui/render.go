@@ -339,6 +339,11 @@ func (m Model) renderHelpBar() string {
 }
 
 func (m Model) renderSkeleton(count, width int) string {
+	// Validate parameters
+	if count <= 0 || width <= 0 {
+		return ""
+	}
+
 	var lines []string
 	for i := 0; i < count; i++ {
 		titleWidth := width / 3
@@ -435,6 +440,9 @@ func (m Model) renderLyrics() string {
 		dots := strings.Repeat(".", m.fetchingDots+1)
 		msg := m.styles.Muted.Render("fetching" + dots)
 		contentHeight := m.height - playerHeight - helpHeight
+		if contentHeight < MinListHeight {
+			contentHeight = MinListHeight
+		}
 		centeredContent := lipgloss.Place(
 			m.width, contentHeight,
 			lipgloss.Center, lipgloss.Center,
@@ -456,6 +464,9 @@ func (m Model) renderLyrics() string {
 		}
 		content := trackInfo + noLyrics
 		contentHeight := m.height - playerHeight - helpHeight
+		if contentHeight < MinListHeight {
+			contentHeight = MinListHeight
+		}
 		centeredContent := lipgloss.Place(
 			m.width, contentHeight,
 			lipgloss.Center, lipgloss.Center,

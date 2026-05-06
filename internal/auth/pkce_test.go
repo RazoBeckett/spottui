@@ -36,13 +36,19 @@ func TestGenerateCodeChallenge(t *testing.T) {
 
 func TestRandomString(t *testing.T) {
 	length := 16
-	s := randomString(length)
+	s, err := randomString(length)
+	if err != nil {
+		t.Fatalf("randomString() error = %v", err)
+	}
 
 	if len(s) != length {
 		t.Errorf("randomString(%d) length = %d, want %d", length, len(s), length)
 	}
 
-	s2 := randomString(length)
+	s2, err := randomString(length)
+	if err != nil {
+		t.Fatalf("randomString() error = %v", err)
+	}
 	if s == s2 {
 		t.Error("randomString() should produce unique values")
 	}
