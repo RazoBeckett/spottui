@@ -347,7 +347,7 @@ func (m Model) volumeUp() tea.Cmd {
 			return ErrMsg{Err: friendlyError(fmt.Errorf("no active playback device"))}
 		}
 
-		newVol := int(state.Device.Volume) + 10
+		newVol := int(state.Device.Volume) + m.cfg.VolumeStep
 		if newVol > 100 {
 			newVol = 100
 		}
@@ -372,7 +372,7 @@ func (m Model) volumeDown() tea.Cmd {
 			return ErrMsg{Err: friendlyError(fmt.Errorf("no active playback device"))}
 		}
 
-		newVol := int(state.Device.Volume) - 10
+		newVol := int(state.Device.Volume) - m.cfg.VolumeStep
 		if newVol < 0 {
 			newVol = 0
 		}
