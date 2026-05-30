@@ -7,11 +7,32 @@ import (
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/zmb3/spotify/v2"
 
 	"github.com/razobeckett/spottui/internal/tui/styles"
 )
+
+// renderRow renders a two-line list row (title + description) with the shared
+// delegate styling. Both lines are truncated to the list width using
+// ANSI-aware truncation so long names never overflow the layout.
+func renderRow(w io.Writer, s styles.Styles, width int, highlight bool, prefix, title, descPrefix, desc string) {
+	titleStyle := s.ListItem
+	if highlight {
+		titleStyle = s.ListItemActive
+	}
+
+	// Reserve room for the style's horizontal padding (≤4 cells).
+	avail := width - 4
+	if avail < 1 {
+		avail = 1
+	}
+
+	titleLine := ansi.Truncate(prefix+title, avail, "…")
+	descLine := ansi.Truncate(descPrefix+desc, avail, "…")
+
+	fmt.Fprint(w, titleStyle.Render(titleLine)+"\n"+s.Muted.Render(descLine))
+}
 
 // PlaylistItem implements list.Item for playlists
 type PlaylistItem struct {
@@ -83,17 +104,11 @@ func (d PlaylistDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 	}
 
 	isSelected := index == m.Index()
-
-	var title, desc string
+	prefix := "  "
 	if isSelected {
-		title = d.Styles.ListItemActive.Render("▶ " + itemTitle)
-		desc = d.Styles.Muted.Render("  " + itemDesc)
-	} else {
-		title = d.Styles.ListItem.Render("  " + itemTitle)
-		desc = d.Styles.Muted.Render("  " + itemDesc)
+		prefix = "▶ "
 	}
-
-	fmt.Fprint(w, title+"\n"+desc)
+	renderRow(w, d.Styles, m.Width(), isSelected, prefix, itemTitle, "  ", itemDesc)
 }
 
 // TrackDelegate handles track item rendering
@@ -115,27 +130,13 @@ func (d TrackDelegate) Render(w io.Writer, m list.Model, index int, listItem lis
 	isPlaying := string(i.Track.Track.URI) == d.CurrentTrack
 	isSelected := index == m.Index()
 
-	var titleStyle, descStyle lipgloss.Style
-
-	if isPlaying || isSelected {
-		titleStyle = d.Styles.ListItemActive
-	} else {
-		titleStyle = d.Styles.ListItem
-	}
-
-	descStyle = d.Styles.Muted
-
 	prefix := "  "
 	if isPlaying {
 		prefix = "♫ "
 	} else if isSelected {
 		prefix = "▶ "
 	}
-
-	title := titleStyle.Render(prefix + i.Title())
-	desc := descStyle.Render("  󰳩 " + i.Description())
-
-	fmt.Fprint(w, title+"\n"+desc)
+	renderRow(w, d.Styles, m.Width(), isPlaying || isSelected, prefix, i.Title(), "  󰳩 ", i.Description())
 }
 
 // CreatePlaylistList creates a new list model for playlists
@@ -242,27 +243,13 @@ func (d AlbumTrackDelegate) Render(w io.Writer, m list.Model, index int, listIte
 	isPlaying := string(i.Track.URI) == d.CurrentTrack
 	isSelected := index == m.Index()
 
-	var titleStyle, descStyle lipgloss.Style
-
-	if isPlaying || isSelected {
-		titleStyle = d.Styles.ListItemActive
-	} else {
-		titleStyle = d.Styles.ListItem
-	}
-
-	descStyle = d.Styles.Muted
-
 	prefix := "  "
 	if isPlaying {
 		prefix = "♫ "
 	} else if isSelected {
 		prefix = "▶ "
 	}
-
-	title := titleStyle.Render(prefix + i.Title())
-	desc := descStyle.Render("  󰳩 " + i.Description())
-
-	fmt.Fprint(w, title+"\n"+desc)
+	renderRow(w, d.Styles, m.Width(), isPlaying || isSelected, prefix, i.Title(), "  󰳩 ", i.Description())
 }
 
 func CreateAlbumTrackList(tracks []spotify.SimpleTrack, s styles.Styles, currentTrackURI string, width, height int) list.Model {
@@ -320,27 +307,13 @@ func (d DeviceDelegate) Render(w io.Writer, m list.Model, index int, listItem li
 	isActive := i.Device.Active
 	isSelected := index == m.Index()
 
-	var titleStyle, descStyle lipgloss.Style
-
-	if isActive || isSelected {
-		titleStyle = d.Styles.ListItemActive
-	} else {
-		titleStyle = d.Styles.ListItem
-	}
-
-	descStyle = d.Styles.Muted
-
 	prefix := "  "
 	if isActive {
 		prefix = "● "
 	} else if isSelected {
 		prefix = "▶ "
 	}
-
-	title := titleStyle.Render(prefix + i.Title())
-	desc := descStyle.Render("  " + i.Description())
-
-	fmt.Fprint(w, title+"\n"+desc)
+	renderRow(w, d.Styles, m.Width(), isActive || isSelected, prefix, i.Title(), "  ", i.Description())
 }
 
 func CreateDeviceList(devices []spotify.PlayerDevice, s styles.Styles, width, height int) list.Model {
@@ -489,27 +462,13 @@ func (d SearchItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 	isPlaying := i.URI() == d.CurrentTrack
 	isSelected := index == m.Index()
 
-	var titleStyle, descStyle lipgloss.Style
-
-	if isPlaying || isSelected {
-		titleStyle = d.Styles.ListItemActive
-	} else {
-		titleStyle = d.Styles.ListItem
-	}
-
-	descStyle = d.Styles.Muted
-
 	prefix := "  "
 	if isPlaying {
 		prefix = "♫ "
 	} else if isSelected {
 		prefix = "▶ "
 	}
-
-	title := titleStyle.Render(prefix + i.Title())
-	desc := descStyle.Render("  " + i.Description())
-
-	fmt.Fprint(w, title+"\n"+desc)
+	renderRow(w, d.Styles, m.Width(), isPlaying || isSelected, prefix, i.Title(), "  ", i.Description())
 }
 
 func CreateSearchResultsList(tracks []spotify.FullTrack, albums []spotify.SimpleAlbum, playlists []spotify.SimplePlaylist, artists []spotify.FullArtist, s styles.Styles, currentTrackURI string, width, height int) list.Model {
@@ -603,27 +562,13 @@ func (d ArtistTopTrackDelegate) Render(w io.Writer, m list.Model, index int, lis
 	isPlaying := string(i.Track.URI) == d.CurrentTrack
 	isSelected := index == m.Index()
 
-	var titleStyle, descStyle lipgloss.Style
-
-	if isPlaying || isSelected {
-		titleStyle = d.Styles.ListItemActive
-	} else {
-		titleStyle = d.Styles.ListItem
-	}
-
-	descStyle = d.Styles.Muted
-
 	prefix := "  "
 	if isPlaying {
 		prefix = "♫ "
 	} else if isSelected {
 		prefix = "▶ "
 	}
-
-	title := titleStyle.Render(prefix + i.Title())
-	desc := descStyle.Render("  󰀥 " + i.Description())
-
-	fmt.Fprint(w, title+"\n"+desc)
+	renderRow(w, d.Styles, m.Width(), isPlaying || isSelected, prefix, i.Title(), "  󰀥 ", i.Description())
 }
 
 func CreateArtistTopTracksList(tracks []spotify.FullTrack, s styles.Styles, currentTrackURI string, width, height int) list.Model {
@@ -689,26 +634,11 @@ func (d ArtistAlbumDelegate) Render(w io.Writer, m list.Model, index int, listIt
 	}
 
 	isSelected := index == m.Index()
-
-	var titleStyle, descStyle lipgloss.Style
-
-	if isSelected {
-		titleStyle = d.Styles.ListItemActive
-	} else {
-		titleStyle = d.Styles.ListItem
-	}
-
-	descStyle = d.Styles.Muted
-
 	prefix := "  "
 	if isSelected {
 		prefix = "▶ "
 	}
-
-	title := titleStyle.Render(prefix + i.Title())
-	desc := descStyle.Render("  " + i.Description())
-
-	fmt.Fprint(w, title+"\n"+desc)
+	renderRow(w, d.Styles, m.Width(), isSelected, prefix, i.Title(), "  ", i.Description())
 }
 
 func CreateArtistAlbumsList(albums []spotify.SimpleAlbum, s styles.Styles, width, height int) list.Model {
