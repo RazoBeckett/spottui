@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/spinner"
+	tea "charm.land/bubbletea/v2"
 	"github.com/zmb3/spotify/v2"
 
 	"github.com/razobeckett/spottui/internal/tui/views"
@@ -472,7 +472,7 @@ func TestViewRendersTooSmall(t *testing.T) {
 	m.width = 30
 	m.height = 10
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render something even when too small")
@@ -485,7 +485,7 @@ func TestViewRendersLoading(t *testing.T) {
 	m.height = 50
 	m.view = ViewLoading
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render loading view")
@@ -498,7 +498,7 @@ func TestViewRendersPlaylists(t *testing.T) {
 	m.height = 50
 	m.view = ViewPlaylists
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render playlists view")
@@ -511,7 +511,7 @@ func TestViewRendersTracks(t *testing.T) {
 	m.height = 50
 	m.view = ViewTracks
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render tracks view")
@@ -524,7 +524,7 @@ func TestViewRendersHelp(t *testing.T) {
 	m.height = 50
 	m.view = ViewHelp
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render help view")
@@ -537,7 +537,7 @@ func TestViewRendersSearch(t *testing.T) {
 	m.height = 50
 	m.view = ViewSearch
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render search view")
@@ -550,7 +550,7 @@ func TestViewRendersDevices(t *testing.T) {
 	m.height = 50
 	m.view = ViewDevices
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render devices view")
@@ -563,7 +563,7 @@ func TestViewRendersHistory(t *testing.T) {
 	m.height = 50
 	m.view = ViewHistory
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render history view")
@@ -576,7 +576,7 @@ func TestViewRendersAlbum(t *testing.T) {
 	m.height = 50
 	m.view = ViewAlbum
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render album view")
@@ -590,7 +590,7 @@ func TestViewRendersArtist(t *testing.T) {
 	m.view = ViewArtist
 	m.artistViewMode = "tracks"
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render artist view")
@@ -604,7 +604,7 @@ func TestViewRendersLyrics(t *testing.T) {
 	m.view = ViewLyrics
 	m.lyricsData = "Test lyrics line 1\nTest lyrics line 2"
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render lyrics view")
@@ -618,7 +618,7 @@ func TestViewRendersAddToPlaylist(t *testing.T) {
 	m.view = ViewAddToPlaylist
 	m.addToPlaylistList = views.CreateAddToPlaylistList(nil, m.styles, 96, 38)
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output == "" {
 		t.Error("View() should render add to playlist view")
@@ -631,7 +631,7 @@ func TestViewRendersUnknown(t *testing.T) {
 	m.height = 50
 	m.view = View(99)
 
-	output := m.View()
+	output := m.renderContent()
 
 	if output != "Unknown view" {
 		t.Errorf("View() for unknown view = %v, want 'Unknown view'", output)

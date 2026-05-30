@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/zmb3/spotify/v2"
 
 	"github.com/razobeckett/spottui/internal/tui/views"
@@ -15,7 +15,7 @@ func TestHandleKeyPress_Quit(t *testing.T) {
 	m.height = 50
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	msg := tea.KeyPressMsg{Code: 'q', Text: "q"}
 	_, cmd := m.handleKeyPress(msg)
 
 	if cmd == nil {
@@ -27,7 +27,7 @@ func TestHandleKeyPress_Help(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}}
+	msg := tea.KeyPressMsg{Code: '?', Text: "?"}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -44,7 +44,7 @@ func TestHandleKeyPress_HelpToggle(t *testing.T) {
 	m.view = ViewHelp
 	m.prevView = ViewTracks
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}}
+	msg := tea.KeyPressMsg{Code: '?', Text: "?"}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -57,7 +57,7 @@ func TestHandleKeyPress_BackFromTracks(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewTracks
 
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -71,7 +71,7 @@ func TestHandleKeyPress_BackFromAlbum(t *testing.T) {
 	m.view = ViewAlbum
 	m.prevView = ViewSearch
 
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -85,7 +85,7 @@ func TestHandleKeyPress_BackFromArtist(t *testing.T) {
 	m.view = ViewArtist
 	m.prevView = ViewTracks
 
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -99,7 +99,7 @@ func TestHandleKeyPress_BackFromLyrics(t *testing.T) {
 	m.view = ViewLyrics
 	m.prevView = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -113,7 +113,7 @@ func TestHandleKeyPress_BackFromDevices(t *testing.T) {
 	m.view = ViewDevices
 	m.prevView = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -127,7 +127,7 @@ func TestHandleKeyPress_BackFromHistory(t *testing.T) {
 	m.view = ViewHistory
 	m.prevView = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -141,7 +141,7 @@ func TestHandleKeyPress_BackFromAddToPlaylist(t *testing.T) {
 	m.view = ViewAddToPlaylist
 	m.prevView = ViewTracks
 
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -154,7 +154,7 @@ func TestHandleKeyPress_PlayPause(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeySpace}
+	msg := tea.KeyPressMsg{Code: tea.KeySpace}
 	_, cmd := m.handleKeyPress(msg)
 
 	if cmd == nil {
@@ -166,7 +166,7 @@ func TestHandleKeyPress_Next(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}
+	msg := tea.KeyPressMsg{Code: 'n', Text: "n"}
 	_, cmd := m.handleKeyPress(msg)
 
 	if cmd == nil {
@@ -178,7 +178,7 @@ func TestHandleKeyPress_Prev(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}
+	msg := tea.KeyPressMsg{Code: 'p', Text: "p"}
 	_, cmd := m.handleKeyPress(msg)
 
 	if cmd == nil {
@@ -190,7 +190,7 @@ func TestHandleKeyPress_VolumeUp(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'+'}}
+	msg := tea.KeyPressMsg{Code: '+', Text: "+"}
 	_, cmd := m.handleKeyPress(msg)
 
 	if cmd == nil {
@@ -202,7 +202,7 @@ func TestHandleKeyPress_VolumeDown(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'-'}}
+	msg := tea.KeyPressMsg{Code: '-', Text: "-"}
 	_, cmd := m.handleKeyPress(msg)
 
 	if cmd == nil {
@@ -214,7 +214,7 @@ func TestHandleKeyPress_Shuffle(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
+	msg := tea.KeyPressMsg{Code: 's', Text: "s"}
 	_, cmd := m.handleKeyPress(msg)
 
 	if cmd == nil {
@@ -226,7 +226,7 @@ func TestHandleKeyPress_Repeat(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}}
+	msg := tea.KeyPressMsg{Code: 'r', Text: "r"}
 	_, cmd := m.handleKeyPress(msg)
 
 	if cmd == nil {
@@ -239,7 +239,7 @@ func TestHandleKeyPress_SeekBackward(t *testing.T) {
 	m.view = ViewHelp
 	m.localProgress = 10000
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'['}}
+	msg := tea.KeyPressMsg{Code: '[', Text: "["}
 	newModel, cmd := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -259,7 +259,7 @@ func TestHandleKeyPress_SeekForward(t *testing.T) {
 	m.view = ViewHelp
 	m.localProgress = 10000
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{']'}}
+	msg := tea.KeyPressMsg{Code: ']', Text: "]"}
 	newModel, cmd := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -279,7 +279,7 @@ func TestHandleKeyPress_SeekBackwardClampToZero(t *testing.T) {
 	m.view = ViewHelp
 	m.localProgress = 2000
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'['}}
+	msg := tea.KeyPressMsg{Code: '[', Text: "["}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -292,7 +292,7 @@ func TestHandleKeyPress_Refresh(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyCtrlR}
+	msg := tea.KeyPressMsg{Code: 'r', Mod: tea.ModCtrl}
 	_, cmd := m.handleKeyPress(msg)
 
 	if cmd == nil {
@@ -304,7 +304,7 @@ func TestHandleKeyPress_GlobalSearch(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'S'}}
+	msg := tea.KeyPressMsg{Code: 'S', Text: "S"}
 	newModel, cmd := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -326,7 +326,7 @@ func TestHandleKeyPress_History(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'H'}}
+	msg := tea.KeyPressMsg{Code: 'H', Text: "H"}
 	newModel, cmd := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -345,7 +345,7 @@ func TestHandleKeyPress_Devices(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	msg := tea.KeyPressMsg{Code: 'd', Text: "d"}
 	newModel, cmd := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -374,7 +374,7 @@ func TestHandleKeyPress_LyricsWithPlayback(t *testing.T) {
 		},
 	}
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'L'}}
+	msg := tea.KeyPressMsg{Code: 'L', Text: "L"}
 	newModel, cmd := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
@@ -390,7 +390,7 @@ func TestHandleKeyPress_LyricsWithoutPlayback(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
 	m.view = ViewPlaylists
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'L'}}
+	msg := tea.KeyPressMsg{Code: 'L', Text: "L"}
 	_, cmd := m.handleKeyPress(msg)
 
 	if cmd != nil {
@@ -405,7 +405,7 @@ func TestHandleLyricsKeys_ScrollUp(t *testing.T) {
 	m.lyricsScrollOffset = 2
 	m.height = 20
 
-	msg := tea.KeyMsg{Type: tea.KeyUp}
+	msg := tea.KeyPressMsg{Code: tea.KeyUp}
 	newModel, _ := m.handleLyricsKeys(msg)
 	updated := newModel.(Model)
 
@@ -421,7 +421,7 @@ func TestHandleLyricsKeys_ScrollDown(t *testing.T) {
 	m.lyricsScrollOffset = 0
 	m.height = 10
 
-	msg := tea.KeyMsg{Type: tea.KeyDown}
+	msg := tea.KeyPressMsg{Code: tea.KeyDown}
 	newModel, _ := m.handleLyricsKeys(msg)
 	updated := newModel.(Model)
 
@@ -437,7 +437,7 @@ func TestHandleLyricsKeys_ScrollUpAtTop(t *testing.T) {
 	m.lyricsScrollOffset = 0
 	m.height = 20
 
-	msg := tea.KeyMsg{Type: tea.KeyUp}
+	msg := tea.KeyPressMsg{Code: tea.KeyUp}
 	newModel, _ := m.handleLyricsKeys(msg)
 	updated := newModel.(Model)
 
@@ -455,7 +455,7 @@ func TestHandleArtistKeys_TabToggle(t *testing.T) {
 	m.artistTopTracks = views.CreateArtistTopTracksList(nil, m.styles, "", 96, 38)
 	m.artistAlbums = views.CreateArtistAlbumsList(nil, m.styles, 96, 38)
 
-	msg := tea.KeyMsg{Type: tea.KeyTab}
+	msg := tea.KeyPressMsg{Code: tea.KeyTab}
 	newModel, _ := m.handleArtistKeys(msg)
 	updated := newModel.(Model)
 
@@ -473,7 +473,7 @@ func TestHandleArtistKeys_TabToggleBack(t *testing.T) {
 	m.artistTopTracks = views.CreateArtistTopTracksList(nil, m.styles, "", 96, 38)
 	m.artistAlbums = views.CreateArtistAlbumsList(nil, m.styles, 96, 38)
 
-	msg := tea.KeyMsg{Type: tea.KeyTab}
+	msg := tea.KeyPressMsg{Code: tea.KeyTab}
 	newModel, _ := m.handleArtistKeys(msg)
 	updated := newModel.(Model)
 
@@ -492,7 +492,7 @@ func TestHandleArtistKeys_Back(t *testing.T) {
 	m.artistTopTracks = views.CreateArtistTopTracksList(nil, m.styles, "", 96, 38)
 	m.artistAlbums = views.CreateArtistAlbumsList(nil, m.styles, 96, 38)
 
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleArtistKeys(msg)
 	updated := newModel.(Model)
 
@@ -550,7 +550,7 @@ func TestHandleSearchKeys_FocusOnSlash(t *testing.T) {
 	m.view = ViewSearch
 	m.searchInput.Blur()
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}}
+	msg := tea.KeyPressMsg{Code: '/', Text: "/"}
 	newModel, cmd := m.handleSearchKeys(msg)
 	updated := newModel.(Model)
 
@@ -567,7 +567,7 @@ func TestHandleSearchKeys_FocusOnI(t *testing.T) {
 	m.view = ViewSearch
 	m.searchInput.Blur()
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}}
+	msg := tea.KeyPressMsg{Code: 'i', Text: "i"}
 	newModel, cmd := m.handleSearchKeys(msg)
 	updated := newModel.(Model)
 
@@ -584,7 +584,7 @@ func TestHandleSearchKeys_EscBlursInput(t *testing.T) {
 	m.view = ViewSearch
 	m.searchInput.Focus()
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	msg := tea.KeyPressMsg{Code: 'q', Text: "q"}
 	newModel, _ := m.handleSearchKeys(msg)
 	updated := newModel.(Model)
 
@@ -599,7 +599,7 @@ func TestHandleSearchKeys_EnterWithQuery(t *testing.T) {
 	m.searchInput.Focus()
 	m.searchInput.SetValue("test query")
 
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	msg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	newModel, cmd := m.handleSearchKeys(msg)
 	updated := newModel.(Model)
 
@@ -620,7 +620,7 @@ func TestHandleSearchKeys_EnterWithEmptyQuery(t *testing.T) {
 	m.searchInput.Focus()
 	m.searchInput.SetValue("")
 
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	msg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	newModel, cmd := m.handleSearchKeys(msg)
 	updated := newModel.(Model)
 

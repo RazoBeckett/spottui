@@ -23,10 +23,10 @@ func TestDefaultStyles(t *testing.T) {
 func TestSpotifyTheme(t *testing.T) {
 	theme := SpotifyTheme
 
-	if theme.Primary.Dark == "" {
-		t.Error("SpotifyTheme.Primary.Dark should not be empty")
+	if theme.Primary == nil {
+		t.Error("SpotifyTheme.Primary should not be nil")
 	}
-	if theme.Primary.Light == "" {
-		t.Error("SpotifyTheme.Primary.Light should not be empty")
+	if theme.Background == nil {
+		t.Error("SpotifyTheme.Background should not be nil")
 	}
 }

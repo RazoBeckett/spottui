@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/key"
 )
 
 func TestDefaultKeyMap(t *testing.T) {
@@ -20,7 +20,7 @@ func TestDefaultKeyMap(t *testing.T) {
 		{"Right", km.Right, []string{"right"}},
 		{"Enter", km.Enter, []string{"enter"}},
 		{"Back", km.Back, []string{"esc", "backspace"}},
-		{"PlayPause", km.PlayPause, []string{" "}},
+		{"PlayPause", km.PlayPause, []string{"space"}},
 		{"Next", km.Next, []string{"n", ">"}},
 		{"Prev", km.Prev, []string{"p", "<"}},
 		{"VolumeUp", km.VolumeUp, []string{"+", "="}},

@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/zmb3/spotify/v2"
 
 	"github.com/razobeckett/spottui/internal/tui/views"
