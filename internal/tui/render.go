@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/razobeckett/spottui/internal/tui/styles"
 	"github.com/razobeckett/spottui/internal/tui/views"
 )
 
@@ -326,7 +327,9 @@ func (m Model) renderHeader() string {
 		userName = m.currentUser.DisplayName
 	}
 
-	logo := m.styles.Header.Render(asciiLogo)
+	logo := lipgloss.NewStyle().Bold(true).Padding(0, 2).Render(
+		styles.GradientLogo(asciiLogo, m.styles.GradStart, m.styles.GradEnd),
+	)
 	user := m.styles.Muted.Render("Welcome, " + userName)
 
 	return lipgloss.JoinVertical(lipgloss.Left, logo, user)

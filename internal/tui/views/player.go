@@ -114,8 +114,8 @@ func renderProgressBar(progress float64, width int, s styles.Styles) string {
 	}
 	empty := width - filled
 
-	bar := strings.Repeat("━", filled) + strings.Repeat("─", empty)
-	return s.ProgressBar.Render(bar)
+	filledBar := styles.ApplyForegroundGrad(strings.Repeat("━", filled), s.GradStart, s.GradEnd)
+	return filledBar + s.ProgressBar.Render(strings.Repeat("─", empty))
 }
 
 func formatDuration(ms int) string {
