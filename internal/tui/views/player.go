@@ -10,8 +10,9 @@ import (
 	"github.com/razobeckett/spottui/internal/tui/styles"
 )
 
-// RenderNowPlaying renders the now playing component
-func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) string {
+// RenderNowPlaying renders the now playing component. progressMs is the
+// locally-tracked playback position used for an optimistic, smooth progress bar.
+func RenderNowPlaying(state *spotify.PlayerState, progressMs int, s styles.Styles, width int) string {
 	if state == nil || state.Item == nil {
 		return s.NowPlaying.Width(max(width-4, 20)).Render(" Nothing playing")
 	}
@@ -53,13 +54,23 @@ func RenderNowPlaying(state *spotify.PlayerState, s styles.Styles, width int) st
 
 	availableWidth := max(width-8, 30)
 	progressWidth := max(availableWidth-14, 10)
+
+	// Clamp the optimistic position to the track duration.
+	posMs := progressMs
+	if posMs < 0 {
+		posMs = 0
+	}
+	if d := int(track.Duration); d > 0 && posMs > d {
+		posMs = d
+	}
+
 	var progress float64
 	if track.Duration > 0 {
-		progress = float64(state.Progress) / float64(track.Duration)
+		progress = float64(posMs) / float64(track.Duration)
 	}
 	progressBar := renderProgressBar(progress, progressWidth, s)
 
-	currentTime := formatDuration(int(state.Progress))
+	currentTime := formatDuration(posMs)
 	totalTime := formatDuration(int(track.Duration))
 	timeStr := fmt.Sprintf("%s / %s", currentTime, totalTime)
 

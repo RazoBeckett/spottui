@@ -12,7 +12,7 @@ import (
 )
 
 func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	if m.view == ViewSearch && m.searchInput.Focused() {
+	if m.Nav.Current == ViewSearch && m.searchInput.Focused() {
 		return m.handleSearchKeys(msg)
 	}
 
@@ -21,52 +21,26 @@ func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case key.Matches(msg, m.keys.Help):
-		if m.view == ViewHelp {
-			m.view = m.prevView
+		if m.Nav.Current == ViewHelp {
+			m.Nav.Pop()
 		} else {
-			m.prevView = m.view
-			m.view = ViewHelp
+			m.Nav.Push(ViewHelp)
 		}
 		return m, nil
 
 	case key.Matches(msg, m.keys.Back):
-		if m.view == ViewHelp {
-			m.view = m.prevView
+		switch m.Nav.Current {
+		case ViewTracks:
+			m.Nav.Current = ViewPlaylists
 			return m, nil
-		}
-		if m.view == ViewTracks {
-			m.view = ViewPlaylists
+		case ViewHelp, ViewAlbum, ViewArtist, ViewLyrics, ViewDevices, ViewHistory, ViewAddToPlaylist:
+			m.Nav.Pop()
 			return m, nil
-		}
-		if m.view == ViewAlbum {
-			m.view = m.prevView
-			return m, nil
-		}
-		if m.view == ViewArtist {
-			m.view = m.prevView
-			return m, nil
-		}
-		if m.view == ViewLyrics {
-			m.view = m.prevView
-			return m, nil
-		}
-		if m.view == ViewDevices {
-			m.view = m.prevView
-			return m, nil
-		}
-		if m.view == ViewSearch {
+		case ViewSearch:
 			if !m.searchInput.Focused() {
-				m.view = m.prevView
+				m.Nav.Pop()
 				return m, nil
 			}
-		}
-		if m.view == ViewHistory {
-			m.view = m.prevView
-			return m, nil
-		}
-		if m.view == ViewAddToPlaylist {
-			m.view = m.prevView
-			return m, nil
 		}
 
 	// Playback controls (global)
@@ -80,89 +54,93 @@ func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, m.prevTrack()
 
 	case key.Matches(msg, m.keys.VolumeUp):
+		m.adjustVolumeOptimistic(m.cfg.VolumeStep)
 		return m, m.volumeUp()
 
 	case key.Matches(msg, m.keys.VolumeDown):
+		m.adjustVolumeOptimistic(-m.cfg.VolumeStep)
 		return m, m.volumeDown()
 
 	case key.Matches(msg, m.keys.Shuffle):
+		if m.Playback.State != nil {
+			m.Playback.State.ShuffleState = !m.Playback.State.ShuffleState
+		}
 		return m, m.toggleShuffle()
 
 	case key.Matches(msg, m.keys.Repeat):
+		if m.Playback.State != nil {
+			m.Playback.State.RepeatState = nextRepeatState(m.Playback.State.RepeatState)
+		}
 		return m, m.cycleRepeat()
 
 	case key.Matches(msg, m.keys.SeekBackward):
-		if !m.seekPending {
-			m.pendingSeek = m.localProgress
+		if !m.Playback.SeekPending {
+			m.Playback.PendingSeek = m.Playback.LocalProgress
 		}
-		m.pendingSeek -= 5000
-		if m.pendingSeek < 0 {
-			m.pendingSeek = 0
+		m.Playback.PendingSeek -= 5000
+		if m.Playback.PendingSeek < 0 {
+			m.Playback.PendingSeek = 0
 		}
-		m.localProgress = m.pendingSeek
-		m.seekPending = true
-		m.lastSeekRequest = time.Now()
+		m.Playback.LocalProgress = m.Playback.PendingSeek
+		m.Playback.SeekPending = true
+		m.Playback.LastSeekRequest = time.Now()
 		return m, m.scheduleSeekTick()
 
 	case key.Matches(msg, m.keys.SeekForward):
-		if !m.seekPending {
-			m.pendingSeek = m.localProgress
+		if !m.Playback.SeekPending {
+			m.Playback.PendingSeek = m.Playback.LocalProgress
 		}
-		m.pendingSeek += 5000
-		if m.playbackState != nil && m.playbackState.Item != nil {
-			if m.pendingSeek > int(m.playbackState.Item.Duration) {
-				m.pendingSeek = int(m.playbackState.Item.Duration)
+		m.Playback.PendingSeek += 5000
+		if m.Playback.State != nil && m.Playback.State.Item != nil {
+			if m.Playback.PendingSeek > int(m.Playback.State.Item.Duration) {
+				m.Playback.PendingSeek = int(m.Playback.State.Item.Duration)
 			}
 		}
-		m.localProgress = m.pendingSeek
-		m.seekPending = true
-		m.lastSeekRequest = time.Now()
+		m.Playback.LocalProgress = m.Playback.PendingSeek
+		m.Playback.SeekPending = true
+		m.Playback.LastSeekRequest = time.Now()
 		return m, m.scheduleSeekTick()
 
 	case key.Matches(msg, m.keys.Refresh):
 		return m, m.pollPlaybackState()
 
 	case key.Matches(msg, m.keys.Devices):
-		m.prevView = m.view
-		m.fetching = true
-		m.fetchingDots = 0
-		m.view = ViewDevices
+		m.UI.Fetching = true
+		m.UI.FetchingDots = 0
+		m.Nav.Push(ViewDevices)
 		m.devicesData = nil
 		return m, tea.Batch(m.fetchDevices(), m.scheduleFetchingTick())
 
 	case key.Matches(msg, m.keys.GlobalSearch):
-		m.prevView = m.view
-		m.view = ViewSearch
+		m.Nav.Push(ViewSearch)
 		m.searchInput.Focus()
 		m.searchTracksData = nil
 		return m, textinput.Blink
 
 	case key.Matches(msg, m.keys.History):
-		m.prevView = m.view
-		m.fetching = true
-		m.fetchingDots = 0
-		m.view = ViewHistory
+		m.UI.Fetching = true
+		m.UI.FetchingDots = 0
+		m.Nav.Push(ViewHistory)
 		m.historyData = nil
 		return m, tea.Batch(m.fetchRecentlyPlayed(), m.scheduleFetchingTick())
 
 	case key.Matches(msg, m.keys.Lyrics):
-		if m.playbackState != nil && m.playbackState.Item != nil {
-			trackName := m.playbackState.Item.Name
+		if m.Playback.State != nil && m.Playback.State.Item != nil {
+			trackName := m.Playback.State.Item.Name
 			artistName := ""
-			if len(m.playbackState.Item.Artists) > 0 {
-				artistName = m.playbackState.Item.Artists[0].Name
+			if len(m.Playback.State.Item.Artists) > 0 {
+				artistName = m.Playback.State.Item.Artists[0].Name
 			}
-			m.prevView = m.view
 			m.fetchingLyrics = true
-			m.fetching = true
-			m.fetchingDots = 0
+			m.UI.Fetching = true
+			m.UI.FetchingDots = 0
 			return m, tea.Batch(m.fetchLyrics(trackName, artistName), m.scheduleFetchingTick())
 		}
 		return m, nil
 	}
 
 	// View-specific keybindings
-	switch m.view {
+	switch m.Nav.Current {
 	case ViewPlaylists:
 		return m.handlePlaylistKeys(msg)
 
@@ -202,16 +180,16 @@ func (m Model) handlePlaylistKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		switch item := m.playlists.SelectedItem().(type) {
 		case views.PlaylistItem:
 			m.selectedPlaylist = &item.Playlist
-			m.fetching = true
-			m.fetchingDots = 0
-			m.view = ViewTracks
+			m.UI.Fetching = true
+			m.UI.FetchingDots = 0
+			m.Nav.Current = ViewTracks
 			m.tracksData = nil
 			return m, tea.Batch(m.fetchTracks(item.Playlist.ID), m.scheduleFetchingTick())
 		case views.LikedSongsItem:
 			m.selectedPlaylist = nil
-			m.fetching = true
-			m.fetchingDots = 0
-			m.view = ViewTracks
+			m.UI.Fetching = true
+			m.UI.FetchingDots = 0
+			m.Nav.Current = ViewTracks
 			m.tracksData = nil
 			return m, tea.Batch(m.fetchLikedTracks(), m.scheduleFetchingTick())
 		}
@@ -235,10 +213,9 @@ func (m Model) handleTrackKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if len(m.tracks.Items()) > 0 {
 			if item, ok := m.tracks.SelectedItem().(views.TrackItem); ok {
 				if len(item.Track.Track.Artists) > 0 {
-					m.prevView = m.view
-					m.fetching = true
-					m.fetchingDots = 0
-					m.view = ViewArtist
+					m.UI.Fetching = true
+					m.UI.FetchingDots = 0
+					m.Nav.Push(ViewArtist)
 					m.artistTopTracksData = nil
 					m.artistAlbumsData = nil
 					return m, tea.Batch(m.fetchArtist(item.Track.Track.Artists[0].ID), m.scheduleFetchingTick())
@@ -259,13 +236,12 @@ func (m Model) handleTrackKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if len(m.tracks.Items()) > 0 {
 			if item, ok := m.tracks.SelectedItem().(views.TrackItem); ok {
 				m.addToPlaylistTrack = item.Track.Track.ID
-				listHeight := m.height - 12
+				listHeight := m.UI.Height - 12
 				if listHeight < 5 {
 					listHeight = 5
 				}
-				m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.width-4, listHeight)
-				m.prevView = m.view
-				m.view = ViewAddToPlaylist
+				m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.UI.Width-4, listHeight)
+				m.Nav.Push(ViewAddToPlaylist)
 				return m, nil
 			}
 		}
@@ -289,10 +265,9 @@ func (m Model) handleAlbumKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if len(m.albumTracks.Items()) > 0 {
 			if item, ok := m.albumTracks.SelectedItem().(views.AlbumTrackItem); ok {
 				if len(item.Track.Artists) > 0 {
-					m.prevView = m.view
-					m.fetching = true
-					m.fetchingDots = 0
-					m.view = ViewArtist
+					m.UI.Fetching = true
+					m.UI.FetchingDots = 0
+					m.Nav.Push(ViewArtist)
 					m.artistTopTracksData = nil
 					m.artistAlbumsData = nil
 					return m, tea.Batch(m.fetchArtist(item.Track.Artists[0].ID), m.scheduleFetchingTick())
@@ -313,13 +288,12 @@ func (m Model) handleAlbumKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if len(m.albumTracks.Items()) > 0 {
 			if item, ok := m.albumTracks.SelectedItem().(views.AlbumTrackItem); ok {
 				m.addToPlaylistTrack = item.Track.ID
-				listHeight := m.height - 12
+				listHeight := m.UI.Height - 12
 				if listHeight < 5 {
 					listHeight = 5
 				}
-				m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.width-4, listHeight)
-				m.prevView = m.view
-				m.view = ViewAddToPlaylist
+				m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.UI.Width-4, listHeight)
+				m.Nav.Push(ViewAddToPlaylist)
 				return m, nil
 			}
 		}
@@ -334,7 +308,7 @@ func (m Model) handleDeviceKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Enter) {
 		if len(m.devices.Items()) > 0 {
 			if item, ok := m.devices.SelectedItem().(views.DeviceItem); ok {
-				m.view = m.prevView
+				m.Nav.Pop()
 				return m, m.transferPlayback(item.Device.ID)
 			}
 		}
@@ -354,7 +328,7 @@ func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if m.searchInput.Value() != "" {
 				m.searchInput.Blur()
-				m.searching = true
+				m.UI.Searching = true
 				return m, m.searchTracks(m.searchInput.Value())
 			}
 			return m, nil
@@ -373,25 +347,22 @@ func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 						return m, m.playSearchItem(item)
 					case views.SearchResultAlbum:
 						m.selectedAlbum = item.Album
-						m.prevView = m.view
-						m.fetching = true
-						m.fetchingDots = 0
-						m.view = ViewAlbum
+						m.UI.Fetching = true
+						m.UI.FetchingDots = 0
+						m.Nav.Push(ViewAlbum)
 						m.albumTracksData = nil
 						return m, tea.Batch(m.fetchAlbumTracks(item.Album.ID), m.scheduleFetchingTick())
 					case views.SearchResultPlaylist:
 						m.selectedPlaylist = item.Playlist
-						m.prevView = m.view
-						m.fetching = true
-						m.fetchingDots = 0
-						m.view = ViewTracks
+						m.UI.Fetching = true
+						m.UI.FetchingDots = 0
+						m.Nav.Current = ViewTracks
 						m.tracksData = nil
 						return m, tea.Batch(m.fetchTracks(item.Playlist.ID), m.scheduleFetchingTick())
 					case views.SearchResultArtist:
-						m.prevView = m.view
-						m.fetching = true
-						m.fetchingDots = 0
-						m.view = ViewArtist
+						m.UI.Fetching = true
+						m.UI.FetchingDots = 0
+						m.Nav.Push(ViewArtist)
 						m.artistTopTracksData = nil
 						m.artistAlbumsData = nil
 						return m, tea.Batch(m.fetchArtist(item.Artist.ID), m.scheduleFetchingTick())
@@ -406,10 +377,9 @@ func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			if len(m.searchResults.Items()) > 0 {
 				if item, ok := m.searchResults.SelectedItem().(views.SearchItem); ok {
 					if item.Type == views.SearchResultTrack && item.Track != nil && len(item.Track.Artists) > 0 {
-						m.prevView = m.view
-						m.fetching = true
-						m.fetchingDots = 0
-						m.view = ViewArtist
+						m.UI.Fetching = true
+						m.UI.FetchingDots = 0
+						m.Nav.Push(ViewArtist)
 						m.artistTopTracksData = nil
 						m.artistAlbumsData = nil
 						return m, tea.Batch(m.fetchArtist(item.Track.Artists[0].ID), m.scheduleFetchingTick())
@@ -437,13 +407,12 @@ func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				if item, ok := m.searchResults.SelectedItem().(views.SearchItem); ok {
 					if item.Type == views.SearchResultTrack && item.Track != nil {
 						m.addToPlaylistTrack = item.Track.ID
-						listHeight := m.height - 12
+						listHeight := m.UI.Height - 12
 						if listHeight < 5 {
 							listHeight = 5
 						}
-						m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.width-4, listHeight)
-						m.prevView = m.view
-						m.view = ViewAddToPlaylist
+						m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.UI.Width-4, listHeight)
+						m.Nav.Push(ViewAddToPlaylist)
 						return m, nil
 					}
 				}
@@ -483,10 +452,9 @@ func (m Model) handleHistoryKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if len(m.historyTracks.Items()) > 0 {
 			if item, ok := m.historyTracks.SelectedItem().(views.AlbumTrackItem); ok {
 				if len(item.Track.Artists) > 0 {
-					m.prevView = m.view
-					m.fetching = true
-					m.fetchingDots = 0
-					m.view = ViewArtist
+					m.UI.Fetching = true
+					m.UI.FetchingDots = 0
+					m.Nav.Push(ViewArtist)
 					m.artistTopTracksData = nil
 					m.artistAlbumsData = nil
 					return m, tea.Batch(m.fetchArtist(item.Track.Artists[0].ID), m.scheduleFetchingTick())
@@ -507,13 +475,12 @@ func (m Model) handleHistoryKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if len(m.historyTracks.Items()) > 0 {
 			if item, ok := m.historyTracks.SelectedItem().(views.AlbumTrackItem); ok {
 				m.addToPlaylistTrack = item.Track.ID
-				listHeight := m.height - 12
+				listHeight := m.UI.Height - 12
 				if listHeight < 5 {
 					listHeight = 5
 				}
-				m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.width-4, listHeight)
-				m.prevView = m.view
-				m.view = ViewAddToPlaylist
+				m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.UI.Width-4, listHeight)
+				m.Nav.Push(ViewAddToPlaylist)
 				return m, nil
 			}
 		}
@@ -526,7 +493,7 @@ func (m Model) handleHistoryKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 func (m Model) handleLyricsKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	lines := strings.Split(m.lyricsData, "\n")
-	visibleHeight := m.height - 6
+	visibleHeight := m.UI.Height - 6
 
 	switch {
 	case key.Matches(msg, m.keys.Up):
@@ -544,7 +511,7 @@ func (m Model) handleLyricsKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 func (m Model) handleArtistKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if key.Matches(msg, m.keys.Back) {
-		m.view = m.prevView
+		m.Nav.Pop()
 		return m, nil
 	}
 
@@ -568,10 +535,9 @@ func (m Model) handleArtistKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			if len(m.artistAlbums.Items()) > 0 {
 				if item, ok := m.artistAlbums.SelectedItem().(views.ArtistAlbumItem); ok {
 					m.selectedAlbum = &item.Album
-					m.prevView = m.view
-					m.fetching = true
-					m.fetchingDots = 0
-					m.view = ViewAlbum
+					m.UI.Fetching = true
+					m.UI.FetchingDots = 0
+					m.Nav.Push(ViewAlbum)
 					m.albumTracksData = nil
 					return m, tea.Batch(m.fetchAlbumTracks(item.Album.ID), m.scheduleFetchingTick())
 				}
@@ -594,13 +560,12 @@ func (m Model) handleArtistKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			if len(m.artistTopTracks.Items()) > 0 {
 				if item, ok := m.artistTopTracks.SelectedItem().(views.ArtistTopTrackItem); ok {
 					m.addToPlaylistTrack = item.Track.ID
-					listHeight := m.height - 12
+					listHeight := m.UI.Height - 12
 					if listHeight < 5 {
 						listHeight = 5
 					}
-					m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.width-4, listHeight)
-					m.prevView = m.view
-					m.view = ViewAddToPlaylist
+					m.addToPlaylistList = views.CreateAddToPlaylistList(m.playlistsData, m.styles, m.UI.Width-4, listHeight)
+					m.Nav.Push(ViewAddToPlaylist)
 					return m, nil
 				}
 			}
@@ -622,7 +587,7 @@ func (m Model) handleAddToPlaylistKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd)
 	if key.Matches(msg, m.keys.Enter) {
 		if len(m.addToPlaylistList.Items()) > 0 {
 			if item, ok := m.addToPlaylistList.SelectedItem().(views.PlaylistItem); ok {
-				m.view = m.prevView
+				m.Nav.Pop()
 				return m, m.addTrackToPlaylist(item.Playlist.ID, item.Playlist.Name, m.addToPlaylistTrack, "")
 			}
 		}

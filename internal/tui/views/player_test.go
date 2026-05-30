@@ -34,14 +34,14 @@ func createPlayerState(playing bool, progress, duration int, trackName, artistNa
 
 func TestRenderNowPlaying_NilState(t *testing.T) {
 	s := styles.DefaultStyles()
-	result := RenderNowPlaying(nil, s, 80)
+	result := RenderNowPlaying(nil, 0, s, 80)
 	assert.Contains(t, result, "Nothing playing")
 }
 
 func TestRenderNowPlaying_NilItem(t *testing.T) {
 	s := styles.DefaultStyles()
 	state := &spotify.PlayerState{}
-	result := RenderNowPlaying(state, s, 80)
+	result := RenderNowPlaying(state, 0, s, 80)
 	assert.Contains(t, result, "Nothing playing")
 }
 
@@ -49,7 +49,7 @@ func TestRenderNowPlaying_WithTrack(t *testing.T) {
 	s := styles.DefaultStyles()
 	state := createPlayerState(true, 60000, 180000, "Test Song", "Artist One", 75, true, "context")
 
-	result := RenderNowPlaying(state, s, 100)
+	result := RenderNowPlaying(state, 60000, s, 100)
 
 	assert.Contains(t, result, "Test Song")
 	assert.Contains(t, result, "Artist One")
@@ -62,11 +62,11 @@ func TestRenderNowPlaying_PlayPauseIcon(t *testing.T) {
 	s := styles.DefaultStyles()
 
 	playingState := createPlayerState(true, 0, 60000, "Track", "Artist", 50, false, "off")
-	result := RenderNowPlaying(playingState, s, 80)
+	result := RenderNowPlaying(playingState, 0, s, 80)
 	assert.Contains(t, result, "")
 
 	pausedState := createPlayerState(false, 0, 60000, "Track", "Artist", 50, false, "off")
-	result = RenderNowPlaying(pausedState, s, 80)
+	result = RenderNowPlaying(pausedState, 0, s, 80)
 	assert.Contains(t, result, "")
 }
 
@@ -74,15 +74,15 @@ func TestRenderNowPlaying_RepeatStates(t *testing.T) {
 	s := styles.DefaultStyles()
 
 	offState := createPlayerState(false, 0, 60000, "Track", "Artist", 50, false, "off")
-	result := RenderNowPlaying(offState, s, 80)
+	result := RenderNowPlaying(offState, 0, s, 80)
 	assert.Contains(t, result, "⟳")
 
 	contextState := createPlayerState(false, 0, 60000, "Track", "Artist", 50, false, "context")
-	result = RenderNowPlaying(contextState, s, 80)
+	result = RenderNowPlaying(contextState, 0, s, 80)
 	assert.Contains(t, result, "⟳")
 
 	trackState := createPlayerState(false, 0, 60000, "Track", "Artist", 50, false, "track")
-	result = RenderNowPlaying(trackState, s, 80)
+	result = RenderNowPlaying(trackState, 0, s, 80)
 	assert.Contains(t, result, "⟳₁")
 }
 
@@ -141,7 +141,7 @@ func TestRenderNowPlaying_SmallWidth(t *testing.T) {
 	s := styles.DefaultStyles()
 	state := createPlayerState(false, 30000, 60000, "A Very Long Song Title", "Artist", 50, false, "off")
 
-	result := RenderNowPlaying(state, s, 30)
+	result := RenderNowPlaying(state, 0, s, 30)
 	assert.NotEmpty(t, result)
 }
 
@@ -166,7 +166,7 @@ func TestRenderNowPlaying_MultipleArtists(t *testing.T) {
 		Device: spotify.PlayerDevice{Volume: 50},
 	}
 
-	result := RenderNowPlaying(state, s, 100)
+	result := RenderNowPlaying(state, 0, s, 100)
 	assert.Contains(t, result, "Artist A")
 	assert.Contains(t, result, "Artist B")
 	assert.Contains(t, result, "Artist C")

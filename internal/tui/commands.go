@@ -277,14 +277,14 @@ func (m Model) scheduleFetchingTick() tea.Cmd {
 }
 
 func (m *Model) startFetching() tea.Cmd {
-	m.fetching = true
-	m.fetchingDots = 0
+	m.UI.Fetching = true
+	m.UI.FetchingDots = 0
 	return m.scheduleFetchingTick()
 }
 
 func (m *Model) stopFetching() {
-	m.fetching = false
-	m.fetchingDots = 0
+	m.UI.Fetching = false
+	m.UI.FetchingDots = 0
 }
 
 // Playback control commands
@@ -417,15 +417,7 @@ func (m Model) cycleRepeat() tea.Cmd {
 			return ErrMsg{Err: friendlyError(fmt.Errorf("no active playback device"))}
 		}
 
-		var newState string
-		switch state.RepeatState {
-		case "off":
-			newState = "context"
-		case "context":
-			newState = "track"
-		default:
-			newState = "off"
-		}
+		newState := nextRepeatState(state.RepeatState)
 
 		err = m.client.Repeat(ctx, newState)
 		if err != nil {

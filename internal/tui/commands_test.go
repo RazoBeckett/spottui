@@ -63,16 +63,16 @@ func TestScheduleSeekTick(t *testing.T) {
 
 func TestStartFetching(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.fetching = false
-	m.fetchingDots = 5
+	m.UI.Fetching = false
+	m.UI.FetchingDots = 5
 
 	cmd := m.startFetching()
 
-	if !m.fetching {
+	if !m.UI.Fetching {
 		t.Error("startFetching() should set fetching to true")
 	}
-	if m.fetchingDots != 0 {
-		t.Errorf("startFetching() should reset fetchingDots, got %d", m.fetchingDots)
+	if m.UI.FetchingDots != 0 {
+		t.Errorf("startFetching() should reset fetchingDots, got %d", m.UI.FetchingDots)
 	}
 	if cmd == nil {
 		t.Error("startFetching() should return a cmd")
@@ -81,16 +81,16 @@ func TestStartFetching(t *testing.T) {
 
 func TestStopFetching(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.fetching = true
-	m.fetchingDots = 3
+	m.UI.Fetching = true
+	m.UI.FetchingDots = 3
 
 	m.stopFetching()
 
-	if m.fetching {
+	if m.UI.Fetching {
 		t.Error("stopFetching() should set fetching to false")
 	}
-	if m.fetchingDots != 0 {
-		t.Errorf("stopFetching() should reset fetchingDots, got %d", m.fetchingDots)
+	if m.UI.FetchingDots != 0 {
+		t.Errorf("stopFetching() should reset fetchingDots, got %d", m.UI.FetchingDots)
 	}
 }
 

@@ -41,17 +41,10 @@ const (
 )
 
 type Model struct {
-	// Core state
-	view     View
-	prevView View // For returning from overlays
-	width    int
-	height   int
-
-	errMsg    string
-	showError bool
-
-	notifyMsg  string
-	showNotify bool
+	// Grouped sub-state
+	Nav      NavState      // active view + back-navigation stack
+	UI       UIState       // transient presentation state
+	Playback PlaybackState // now-playing snapshot + local progress/seek
 
 	// Spotify client
 	client *spotify.Client
@@ -82,14 +75,12 @@ type Model struct {
 	albumTracksData     []spotify.SimpleTrack
 	artistTopTracksData []spotify.FullTrack
 	artistAlbumsData    []spotify.SimpleAlbum
-	playbackState       *spotify.PlayerState
 	devicesData         []spotify.PlayerDevice
 	searchTracksData    []spotify.FullTrack
 	searchAlbumsData    []spotify.SimpleAlbum
 	searchPlaylistsData []spotify.SimplePlaylist
 	searchArtistsData   []spotify.FullArtist
 	historyData         []spotify.RecentlyPlayedItem
-	searching           bool
 	artistViewMode      string
 	lyricsData          string
 	lyricsSynced        []SyncedLyricLine
@@ -99,19 +90,8 @@ type Model struct {
 	lyricsScrollOffset  int
 	fetchingLyrics      bool
 
-	localProgress  int
-	lastProgressAt time.Time
-	isPlaying      bool
-
-	pendingSeek     int
-	seekPending     bool
-	lastSeekRequest time.Time
-
 	addToPlaylistTrack spotify.ID
 	addToPlaylistList  list.Model
-
-	fetching     bool
-	fetchingDots int
 
 	// Styling and keybindings
 	styles styles.Styles
@@ -133,7 +113,7 @@ func NewModel(client *spotify.Client, cfg *config.Config) Model {
 	ti.SetWidth(40)
 
 	return Model{
-		view:        ViewLoading,
+		Nav:         NavState{Current: ViewLoading},
 		client:      client,
 		ctx:         context.Background(),
 		cfg:         cfg,
@@ -159,32 +139,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		if m.view == ViewPlaylists && m.playlists.FilterState() == list.Filtering {
+		if m.Nav.Current == ViewPlaylists && m.playlists.FilterState() == list.Filtering {
 			var cmd tea.Cmd
 			m.playlists, cmd = m.playlists.Update(msg)
 			return m, cmd
 		}
-		if m.view == ViewTracks && m.tracks.FilterState() == list.Filtering {
+		if m.Nav.Current == ViewTracks && m.tracks.FilterState() == list.Filtering {
 			var cmd tea.Cmd
 			m.tracks, cmd = m.tracks.Update(msg)
 			return m, cmd
 		}
-		if m.view == ViewAlbum && m.albumTracks.FilterState() == list.Filtering {
+		if m.Nav.Current == ViewAlbum && m.albumTracks.FilterState() == list.Filtering {
 			var cmd tea.Cmd
 			m.albumTracks, cmd = m.albumTracks.Update(msg)
 			return m, cmd
 		}
-		if m.view == ViewHistory && m.historyTracks.FilterState() == list.Filtering {
+		if m.Nav.Current == ViewHistory && m.historyTracks.FilterState() == list.Filtering {
 			var cmd tea.Cmd
 			m.historyTracks, cmd = m.historyTracks.Update(msg)
 			return m, cmd
 		}
-		if m.view == ViewArtist && m.artistAlbums.FilterState() == list.Filtering {
+		if m.Nav.Current == ViewArtist && m.artistAlbums.FilterState() == list.Filtering {
 			var cmd tea.Cmd
 			m.artistAlbums, cmd = m.artistAlbums.Update(msg)
 			return m, cmd
 		}
-		if m.view == ViewAddToPlaylist && m.addToPlaylistList.FilterState() == list.Filtering {
+		if m.Nav.Current == ViewAddToPlaylist && m.addToPlaylistList.FilterState() == list.Filtering {
 			var cmd tea.Cmd
 			m.addToPlaylistList, cmd = m.addToPlaylistList.Update(msg)
 			return m, cmd
@@ -192,10 +172,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKeyPress(msg)
 
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		listWidth := m.width - HorizontalPad
-		listHeight := m.height - ListHeightSub
+		m.UI.Width = msg.Width
+		m.UI.Height = msg.Height
+		listWidth := m.UI.Width - HorizontalPad
+		listHeight := m.UI.Height - ListHeightSub
 		if listHeight < MinListHeight {
 			listHeight = MinListHeight
 		}
@@ -220,15 +200,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.currentUser = msg.User
 		m.playlistsData = msg.Playlists
 		m.playlists = views.CreatePlaylistList(msg.Playlists, msg.LikedSongsTotal, m.styles, m.listWidth(), m.listHeight())
-		m.view = ViewPlaylists
-		return m, tea.Batch(m.pollPlaybackState(), m.schedulePlaybackPoll())
+		m.Nav.Current = ViewPlaylists
+		return m, tea.Batch(m.pollPlaybackState(), m.schedulePlaybackPoll(), m.scheduleProgressTick())
 
 	case TracksLoadedMsg:
-		m.fetching = false
+		m.UI.Fetching = false
 		m.tracksData = msg.Tracks
 		currentTrack := ""
-		if m.playbackState != nil && m.playbackState.Item != nil {
-			currentTrack = string(m.playbackState.Item.URI)
+		if m.Playback.State != nil && m.Playback.State.Item != nil {
+			currentTrack = string(m.Playback.State.Item.URI)
 		}
 		m.tracks = views.CreateTrackList(msg.Tracks, m.styles, currentTrack, m.listWidth(), m.listHeight())
 		if m.selectedPlaylist != nil {
@@ -239,11 +219,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case AlbumTracksLoadedMsg:
-		m.fetching = false
+		m.UI.Fetching = false
 		m.albumTracksData = msg.Tracks
 		currentTrack := ""
-		if m.playbackState != nil && m.playbackState.Item != nil {
-			currentTrack = string(m.playbackState.Item.URI)
+		if m.Playback.State != nil && m.Playback.State.Item != nil {
+			currentTrack = string(m.Playback.State.Item.URI)
 		}
 		m.albumTracks = views.CreateAlbumTrackList(msg.Tracks, m.styles, currentTrack, m.listWidth(), m.listHeight())
 		if m.selectedAlbum != nil {
@@ -252,52 +232,55 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case PlaybackStateMsg:
-		m.playbackState = msg.State
+		m.Playback.State = msg.State
 		if msg.State != nil {
-			m.localProgress = int(msg.State.Progress)
-			m.lastProgressAt = time.Now()
-			m.isPlaying = msg.State.Playing
+			// Don't clobber the optimistic position while a seek is in flight.
+			if !m.Playback.SeekPending {
+				m.Playback.LocalProgress = int(msg.State.Progress)
+				m.Playback.LastProgressAt = time.Now()
+			}
+			m.Playback.IsPlaying = msg.State.Playing
 		}
-		if m.view == ViewTracks && m.playbackState != nil && m.playbackState.Item != nil {
-			currentTrack := string(m.playbackState.Item.URI)
+		if m.Nav.Current == ViewTracks && m.Playback.State != nil && m.Playback.State.Item != nil {
+			currentTrack := string(m.Playback.State.Item.URI)
 			delegate := views.TrackDelegate{Styles: m.styles, CurrentTrack: currentTrack}
 			m.tracks.SetDelegate(delegate)
 		}
-		if m.view == ViewLyrics && m.playbackState != nil && m.playbackState.Item != nil && !m.fetchingLyrics {
-			newTrackName := m.playbackState.Item.Name
+		if m.Nav.Current == ViewLyrics && m.Playback.State != nil && m.Playback.State.Item != nil && !m.fetchingLyrics {
+			newTrackName := m.Playback.State.Item.Name
 			newArtistName := ""
-			if len(m.playbackState.Item.Artists) > 0 {
-				newArtistName = m.playbackState.Item.Artists[0].Name
+			if len(m.Playback.State.Item.Artists) > 0 {
+				newArtistName = m.Playback.State.Item.Artists[0].Name
 			}
 			if newTrackName != m.lyricsTrackName || newArtistName != m.lyricsArtistName {
 				m.fetchingLyrics = true
-				m.fetching = true
+				m.UI.Fetching = true
 				return m, tea.Batch(m.fetchLyrics(newTrackName, newArtistName), m.scheduleFetchingTick())
 			}
 		}
 		return m, nil
 
 	case ProgressTickMsg:
-		if m.isPlaying && m.view == ViewLyrics {
-			elapsed := time.Since(m.lastProgressAt)
-			m.localProgress += int(elapsed.Milliseconds())
-			m.lastProgressAt = time.Now()
+		if m.Playback.IsPlaying {
+			elapsed := time.Since(m.Playback.LastProgressAt)
+			m.Playback.LocalProgress += int(elapsed.Milliseconds())
+			m.Playback.LastProgressAt = time.Now()
 		}
 		return m, m.scheduleProgressTick()
 
 	case SeekTickMsg:
-		if m.seekPending && time.Since(m.lastSeekRequest) >= 100*time.Millisecond {
-			m.seekPending = false
-			return m, m.executeSeek(m.pendingSeek)
+		if m.Playback.SeekPending && time.Since(m.Playback.LastSeekRequest) >= 100*time.Millisecond {
+			m.Playback.SeekPending = false
+			return m, m.executeSeek(m.Playback.PendingSeek)
 		}
-		if m.seekPending {
+		if m.Playback.SeekPending {
 			return m, m.scheduleSeekTick()
 		}
 		return m, nil
 
 	case FetchingTickMsg:
-		if m.fetching {
-			m.fetchingDots = (m.fetchingDots + 1) % 4
+		if m.UI.Fetching {
+			m.UI.FetchingDots = (m.UI.FetchingDots + 1) % 4
 			return m, m.scheduleFetchingTick()
 		}
 		return m, nil
@@ -306,80 +289,80 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.pollPlaybackState(), m.schedulePlaybackPoll())
 
 	case DevicesLoadedMsg:
-		m.fetching = false
+		m.UI.Fetching = false
 		m.devicesData = msg.Devices
 		m.devices = views.CreateDeviceList(msg.Devices, m.styles, m.listWidth(), m.listHeight())
 		return m, nil
 
 	case SearchResultsMsg:
-		m.fetching = false
-		m.searching = false
+		m.UI.Fetching = false
+		m.UI.Searching = false
 		m.searchTracksData = msg.Tracks
 		m.searchAlbumsData = msg.Albums
 		m.searchPlaylistsData = msg.Playlists
 		m.searchArtistsData = msg.Artists
 		currentTrack := ""
-		if m.playbackState != nil && m.playbackState.Item != nil {
-			currentTrack = string(m.playbackState.Item.URI)
+		if m.Playback.State != nil && m.Playback.State.Item != nil {
+			currentTrack = string(m.Playback.State.Item.URI)
 		}
 		m.searchResults = views.CreateSearchResultsList(msg.Tracks, msg.Albums, msg.Playlists, msg.Artists, m.styles, currentTrack, m.listWidth(), m.listHeight())
 		return m, nil
 
 	case HistoryLoadedMsg:
-		m.fetching = false
+		m.UI.Fetching = false
 		m.historyData = msg.Items
 		currentTrack := ""
-		if m.playbackState != nil && m.playbackState.Item != nil {
-			currentTrack = string(m.playbackState.Item.URI)
+		if m.Playback.State != nil && m.Playback.State.Item != nil {
+			currentTrack = string(m.Playback.State.Item.URI)
 		}
 		m.historyTracks = views.CreateHistoryList(msg.Items, m.styles, currentTrack, m.listWidth(), m.listHeight())
 		return m, nil
 
 	case ArtistLoadedMsg:
-		m.fetching = false
+		m.UI.Fetching = false
 		m.selectedArtist = msg.Artist
 		m.artistTopTracksData = msg.TopTracks
 		m.artistAlbumsData = msg.Albums
 		m.artistViewMode = "tracks"
 		currentTrack := ""
-		if m.playbackState != nil && m.playbackState.Item != nil {
-			currentTrack = string(m.playbackState.Item.URI)
+		if m.Playback.State != nil && m.Playback.State.Item != nil {
+			currentTrack = string(m.Playback.State.Item.URI)
 		}
 		m.artistTopTracks = views.CreateArtistTopTracksList(msg.TopTracks, m.styles, currentTrack, m.listWidth(), m.listHeight())
 		m.artistAlbums = views.CreateArtistAlbumsList(msg.Albums, m.styles, m.listWidth(), m.listHeight())
 		return m, nil
 
 	case ErrMsg:
-		m.fetching = false
-		m.errMsg = msg.Err.Error()
-		m.showError = true
+		m.UI.Fetching = false
+		m.UI.ErrMsg = msg.Err.Error()
+		m.UI.ShowError = true
 		return m, m.scheduleErrorDismiss()
 
 	case DismissErrorMsg:
-		m.showError = false
-		m.errMsg = ""
+		m.UI.ShowError = false
+		m.UI.ErrMsg = ""
 		return m, nil
 
 	case VolumeChangedMsg:
-		if m.playbackState != nil && m.playbackState.Device.ID != "" {
-			m.playbackState.Device.Volume = spotify.Numeric(msg.Volume)
+		if m.Playback.State != nil && m.Playback.State.Device.ID != "" {
+			m.Playback.State.Device.Volume = spotify.Numeric(msg.Volume)
 		}
 		return m, nil
 
 	case ShuffleToggledMsg:
-		if m.playbackState != nil {
-			m.playbackState.ShuffleState = msg.NewState
+		if m.Playback.State != nil {
+			m.Playback.State.ShuffleState = msg.NewState
 		}
 		return m, nil
 
 	case RepeatCycledMsg:
-		if m.playbackState != nil {
-			m.playbackState.RepeatState = msg.NewState
+		if m.Playback.State != nil {
+			m.Playback.State.RepeatState = msg.NewState
 		}
 		return m, nil
 
 	case LyricsLoadedMsg:
-		m.fetching = false
+		m.UI.Fetching = false
 		m.fetchingLyrics = false
 		m.lyricsTrackName = msg.TrackName
 		m.lyricsArtistName = msg.ArtistName
@@ -395,9 +378,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lyricsData = msg.Lyrics
 		}
 
-		m.view = ViewLyrics
-		if m.lyricsIsSynced {
-			return m, m.scheduleProgressTick()
+		if m.Nav.Current != ViewLyrics {
+			m.Nav.Push(ViewLyrics)
 		}
 		return m, nil
 
@@ -406,23 +388,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !msg.IsLiked {
 			action = "♡ Unliked"
 		}
-		m.notifyMsg = action + ": " + msg.TrackName
-		m.showNotify = true
+		m.UI.NotifyMsg = action + ": " + msg.TrackName
+		m.UI.ShowNotify = true
 		return m, m.scheduleNotifyDismiss()
 
 	case DismissNotifyMsg:
-		m.showNotify = false
-		m.notifyMsg = ""
+		m.UI.ShowNotify = false
+		m.UI.NotifyMsg = ""
 		return m, nil
 
 	case TrackAddedToPlaylistMsg:
-		m.notifyMsg = "Added to " + msg.PlaylistName
-		m.showNotify = true
+		m.UI.NotifyMsg = "Added to " + msg.PlaylistName
+		m.UI.ShowNotify = true
 		return m, m.scheduleNotifyDismiss()
 	}
 
 	// Delegate to active view's sub-model
-	switch m.view {
+	switch m.Nav.Current {
 	case ViewPlaylists:
 		var cmd tea.Cmd
 		m.playlists, cmd = m.playlists.Update(msg)
@@ -445,11 +427,11 @@ func (m Model) View() tea.View {
 }
 
 func (m Model) renderContent() string {
-	if m.width < MinWidth || m.height < MinHeight {
+	if m.UI.Width < MinWidth || m.UI.Height < MinHeight {
 		return m.renderTooSmall()
 	}
 
-	switch m.view {
+	switch m.Nav.Current {
 	case ViewLoading:
 		return m.renderLoading()
 	case ViewPlaylists:
@@ -478,7 +460,7 @@ func (m Model) renderContent() string {
 }
 
 func (m Model) listHeight() int {
-	h := m.height - ListHeightSub
+	h := m.UI.Height - ListHeightSub
 	if h < MinListHeight {
 		return MinListHeight
 	}
@@ -486,5 +468,5 @@ func (m Model) listHeight() int {
 }
 
 func (m Model) listWidth() int {
-	return m.width - HorizontalPad
+	return m.UI.Width - HorizontalPad
 }
