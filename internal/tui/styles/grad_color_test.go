@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestApplyForegroundGradColors(t *testing.T) {
@@ -12,8 +13,8 @@ func TestApplyForegroundGradColors(t *testing.T) {
 	if !strings.Contains(out, "\x1b[") {
 		t.Fatalf("expected ANSI color codes, got %q", out)
 	}
-	if !strings.Contains(out, "A") || !strings.Contains(out, "F") {
-		t.Fatalf("expected original glyphs preserved")
+	if stripped := ansi.Strip(out); stripped != "ABCDEF" {
+		t.Fatalf("expected stripped output %q, got %q", "ABCDEF", stripped)
 	}
 }
 
