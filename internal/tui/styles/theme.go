@@ -74,6 +74,10 @@ type Styles struct {
 	Muted      lipgloss.Style
 	ActiveIcon lipgloss.Style
 	MutedIcon  lipgloss.Style
+
+	// Gradient endpoints (primary -> accent) for logo and progress bar.
+	GradStart color.Color
+	GradEnd   color.Color
 }
 
 // NewStyles creates styled components from a theme
@@ -171,6 +175,9 @@ func NewStyles(theme Theme) Styles {
 
 		MutedIcon: lipgloss.NewStyle().
 			Foreground(theme.TextMuted),
+
+		GradStart: theme.Primary,
+		GradEnd:   theme.Accent,
 	}
 }
 

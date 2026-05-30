@@ -4,12 +4,13 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/razobeckett/spottui/internal/tui/styles"
 	"github.com/razobeckett/spottui/internal/tui/views"
 )
 
 func (m Model) renderLoading() string {
 	return lipgloss.Place(
-		m.width, m.height,
+		m.UI.Width, m.UI.Height,
 		lipgloss.Center, lipgloss.Center,
 		m.styles.Spinner.Render(m.spinner.View()+" Loading your Spotify data..."),
 	)
@@ -19,7 +20,7 @@ func (m Model) renderTooSmall() string {
 	msg := m.styles.Error.Render("Terminal too small") + "\n" +
 		m.styles.Muted.Render("Minimum: 60x15")
 	return lipgloss.Place(
-		m.width, m.height,
+		m.UI.Width, m.UI.Height,
 		lipgloss.Center, lipgloss.Center,
 		msg,
 	)
@@ -28,14 +29,14 @@ func (m Model) renderTooSmall() string {
 func (m Model) renderPlaylists() string {
 	header := m.renderHeader()
 	notification := m.renderNotification()
-	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	player := views.RenderNowPlaying(m.Playback.State, m.Playback.LocalProgress, m.styles, m.UI.Width)
 	help := m.renderHelpBar()
 
 	headerHeight := lipgloss.Height(header)
 	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
+	contentHeight := m.UI.Height - headerHeight - notificationHeight - playerHeight - helpHeight
 
 	if contentHeight < MinListHeight {
 		contentHeight = MinListHeight
@@ -55,21 +56,21 @@ func (m Model) renderPlaylists() string {
 func (m Model) renderTracks() string {
 	header := m.renderHeader()
 	notification := m.renderNotification()
-	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	player := views.RenderNowPlaying(m.Playback.State, m.Playback.LocalProgress, m.styles, m.UI.Width)
 	help := m.renderHelpBar()
 
 	headerHeight := lipgloss.Height(header)
 	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
+	contentHeight := m.UI.Height - headerHeight - notificationHeight - playerHeight - helpHeight
 
 	if contentHeight < MinListHeight {
 		contentHeight = MinListHeight
 	}
 
 	var contentView string
-	if m.fetching && len(m.tracksData) == 0 {
+	if m.UI.Fetching && len(m.tracksData) == 0 {
 		title := "Liked Songs"
 		if m.selectedPlaylist != nil {
 			title = m.selectedPlaylist.Name
@@ -95,21 +96,21 @@ func (m Model) renderTracks() string {
 func (m Model) renderAlbum() string {
 	header := m.renderHeader()
 	notification := m.renderNotification()
-	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	player := views.RenderNowPlaying(m.Playback.State, m.Playback.LocalProgress, m.styles, m.UI.Width)
 	help := m.renderHelpBar()
 
 	headerHeight := lipgloss.Height(header)
 	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
+	contentHeight := m.UI.Height - headerHeight - notificationHeight - playerHeight - helpHeight
 
 	if contentHeight < MinListHeight {
 		contentHeight = MinListHeight
 	}
 
 	var contentView string
-	if m.fetching && len(m.albumTracksData) == 0 {
+	if m.UI.Fetching && len(m.albumTracksData) == 0 {
 		title := "Album"
 		if m.selectedAlbum != nil {
 			title = m.selectedAlbum.Name
@@ -138,14 +139,14 @@ func (m Model) renderDevices() string {
 
 	headerHeight := lipgloss.Height(header)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - helpHeight
+	contentHeight := m.UI.Height - headerHeight - helpHeight
 
 	if contentHeight < MinListHeight {
 		contentHeight = MinListHeight
 	}
 
 	var contentView string
-	if m.fetching && len(m.devicesData) == 0 {
+	if m.UI.Fetching && len(m.devicesData) == 0 {
 		titleLine := m.styles.ListItemActive.Render("Devices")
 		skeletonCount := (contentHeight - 2) / 2
 		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
@@ -169,7 +170,7 @@ func (m Model) renderSearch() string {
 	searchBox := inputStyle.Render(m.searchInput.View())
 
 	notification := m.renderNotification()
-	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	player := views.RenderNowPlaying(m.Playback.State, m.Playback.LocalProgress, m.styles, m.UI.Width)
 	help := m.styles.HelpBar.Render("enter search • ↑/↓ navigate results • shift+s focus search • esc back")
 
 	headerHeight := lipgloss.Height(header)
@@ -177,7 +178,7 @@ func (m Model) renderSearch() string {
 	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - searchBoxHeight - notificationHeight - playerHeight - helpHeight
+	contentHeight := m.UI.Height - headerHeight - searchBoxHeight - notificationHeight - playerHeight - helpHeight
 
 	if contentHeight < MinListHeight {
 		contentHeight = MinListHeight
@@ -186,7 +187,7 @@ func (m Model) renderSearch() string {
 	var contentView string
 	if m.hasSearchResults() {
 		contentView = m.searchResults.View()
-	} else if m.searching {
+	} else if m.UI.Searching {
 		titleLine := m.styles.ListItemActive.Render("Search Results")
 		skeletonCount := (contentHeight - 2) / 2
 		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
@@ -212,21 +213,21 @@ func (m Model) renderSearch() string {
 func (m Model) renderHistory() string {
 	header := m.renderHeader()
 	notification := m.renderNotification()
-	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	player := views.RenderNowPlaying(m.Playback.State, m.Playback.LocalProgress, m.styles, m.UI.Width)
 	help := m.renderHelpBar()
 
 	headerHeight := lipgloss.Height(header)
 	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight
+	contentHeight := m.UI.Height - headerHeight - notificationHeight - playerHeight - helpHeight
 
 	if contentHeight < MinListHeight {
 		contentHeight = MinListHeight
 	}
 
 	var contentView string
-	if m.fetching && len(m.historyData) == 0 {
+	if m.UI.Fetching && len(m.historyData) == 0 {
 		titleLine := m.styles.ListItemActive.Render("Recently Played")
 		skeletonCount := (contentHeight - 2) / 2
 		skeleton := m.renderSkeleton(skeletonCount, m.listWidth())
@@ -277,7 +278,7 @@ func (m Model) renderArtist() string {
 	tabs := "  " + tracksTab + "  " + albumsTab
 
 	notification := m.renderNotification()
-	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	player := views.RenderNowPlaying(m.Playback.State, m.Playback.LocalProgress, m.styles, m.UI.Width)
 	help := m.styles.HelpBar.Render("tab switch view • enter play/select • a view artist • esc back")
 
 	headerHeight := lipgloss.Height(header)
@@ -286,14 +287,14 @@ func (m Model) renderArtist() string {
 	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	contentHeight := m.height - headerHeight - artistHeaderHeight - tabsHeight - notificationHeight - playerHeight - helpHeight
+	contentHeight := m.UI.Height - headerHeight - artistHeaderHeight - tabsHeight - notificationHeight - playerHeight - helpHeight
 
 	if contentHeight < MinListHeight {
 		contentHeight = MinListHeight
 	}
 
 	var listView string
-	if m.fetching && len(m.artistTopTracksData) == 0 && len(m.artistAlbumsData) == 0 {
+	if m.UI.Fetching && len(m.artistTopTracksData) == 0 && len(m.artistAlbumsData) == 0 {
 		skeletonCount := (contentHeight - 2) / 2
 		listView = m.renderSkeleton(skeletonCount, m.listWidth())
 	} else if m.artistViewMode == "tracks" {
@@ -326,7 +327,9 @@ func (m Model) renderHeader() string {
 		userName = m.currentUser.DisplayName
 	}
 
-	logo := m.styles.Header.Render(asciiLogo)
+	logo := lipgloss.NewStyle().Bold(true).Padding(0, 2).Render(
+		styles.GradientLogo(asciiLogo, m.styles.GradStart, m.styles.GradEnd),
+	)
 	user := m.styles.Muted.Render("Welcome, " + userName)
 
 	return lipgloss.JoinVertical(lipgloss.Left, logo, user)
@@ -362,16 +365,16 @@ func (m Model) renderSkeleton(count, width int) string {
 }
 
 func (m Model) renderNotification() string {
-	if m.showError {
-		return m.styles.Error.Render(" " + m.errMsg)
+	if m.UI.ShowError {
+		return m.styles.Error.Render(" " + m.UI.ErrMsg)
 	}
-	if m.showNotify {
-		return m.styles.Success.Render(m.notifyMsg)
+	if m.UI.ShowNotify {
+		return m.styles.Success.Render(m.UI.NotifyMsg)
 	}
-	if m.fetching {
-		dots := strings.Repeat(".", m.fetchingDots+1)
+	if m.UI.Fetching {
+		dots := strings.Repeat(".", m.UI.FetchingDots+1)
 		msg := m.styles.Muted.Render("fetching" + dots)
-		return lipgloss.PlaceHorizontal(m.width, lipgloss.Center, msg)
+		return lipgloss.PlaceHorizontal(m.UI.Width, lipgloss.Center, msg)
 	}
 	return ""
 }
@@ -423,28 +426,28 @@ func (m Model) renderHelp() string {
 	dialog := m.styles.Dialog.Render(content)
 
 	return lipgloss.Place(
-		m.width, m.height,
+		m.UI.Width, m.UI.Height,
 		lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Center, dialog, "", footer),
 	)
 }
 
 func (m Model) renderLyrics() string {
-	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	player := views.RenderNowPlaying(m.Playback.State, m.Playback.LocalProgress, m.styles, m.UI.Width)
 	help := m.styles.HelpBar.Render("↑/↓ scroll • esc back")
 
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
 
-	if m.fetching {
-		dots := strings.Repeat(".", m.fetchingDots+1)
+	if m.UI.Fetching {
+		dots := strings.Repeat(".", m.UI.FetchingDots+1)
 		msg := m.styles.Muted.Render("fetching" + dots)
-		contentHeight := m.height - playerHeight - helpHeight
+		contentHeight := m.UI.Height - playerHeight - helpHeight
 		if contentHeight < MinListHeight {
 			contentHeight = MinListHeight
 		}
 		centeredContent := lipgloss.Place(
-			m.width, contentHeight,
+			m.UI.Width, contentHeight,
 			lipgloss.Center, lipgloss.Center,
 			msg,
 		)
@@ -463,12 +466,12 @@ func (m Model) renderLyrics() string {
 			trackInfo = m.styles.ListTitle.Render(m.lyricsTrackName+" - "+m.lyricsArtistName) + "\n\n"
 		}
 		content := trackInfo + noLyrics
-		contentHeight := m.height - playerHeight - helpHeight
+		contentHeight := m.UI.Height - playerHeight - helpHeight
 		if contentHeight < MinListHeight {
 			contentHeight = MinListHeight
 		}
 		centeredContent := lipgloss.Place(
-			m.width, contentHeight,
+			m.UI.Width, contentHeight,
 			lipgloss.Center, lipgloss.Center,
 			content,
 		)
@@ -480,10 +483,10 @@ func (m Model) renderLyrics() string {
 	}
 
 	header := m.styles.ListTitle.Render("♫ " + m.lyricsTrackName + " - " + m.lyricsArtistName)
-	header = lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(header)
+	header = lipgloss.NewStyle().Width(m.UI.Width).Align(lipgloss.Center).Render(header)
 
 	headerHeight := lipgloss.Height(header)
-	lyricsAreaHeight := m.height - headerHeight - playerHeight - helpHeight - 2
+	lyricsAreaHeight := m.UI.Height - headerHeight - playerHeight - helpHeight - 2
 
 	if lyricsAreaHeight < MinListHeight {
 		lyricsAreaHeight = MinListHeight
@@ -516,7 +519,7 @@ func (m Model) renderPlainLyrics(header, player, help string, lyricsAreaHeight i
 
 	var styledLines []string
 	for _, line := range visibleLines {
-		centered := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(line)
+		centered := lipgloss.NewStyle().Width(m.UI.Width).Align(lipgloss.Center).Render(line)
 		styledLines = append(styledLines, centered)
 	}
 
@@ -534,7 +537,7 @@ func (m Model) renderPlainLyrics(header, player, help string, lyricsAreaHeight i
 }
 
 func (m Model) renderSyncedLyrics(header, player, help string, lyricsAreaHeight int) string {
-	currentTimeMs := m.localProgress
+	currentTimeMs := m.Playback.LocalProgress
 
 	currentLineIdx := 0
 	for i, line := range m.lyricsSynced {
@@ -574,7 +577,7 @@ func (m Model) renderSyncedLyrics(header, player, help string, lyricsAreaHeight 
 		} else {
 			styled = mutedStyle.Render(line.Text)
 		}
-		centered := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(styled)
+		centered := lipgloss.NewStyle().Width(m.UI.Width).Align(lipgloss.Center).Render(styled)
 		styledLines = append(styledLines, centered)
 	}
 
@@ -598,20 +601,20 @@ func (m Model) renderSyncedLyrics(header, player, help string, lyricsAreaHeight 
 func (m Model) renderAddToPlaylist() string {
 	header := m.styles.Header.Render("Add to Playlist")
 	notification := m.renderNotification()
-	player := views.RenderNowPlaying(m.playbackState, m.styles, m.width)
+	player := views.RenderNowPlaying(m.Playback.State, m.Playback.LocalProgress, m.styles, m.UI.Width)
 	help := m.renderHelpBar()
 
 	headerHeight := lipgloss.Height(header)
 	notificationHeight := lipgloss.Height(notification)
 	playerHeight := lipgloss.Height(player)
 	helpHeight := lipgloss.Height(help)
-	availableHeight := m.height - headerHeight - notificationHeight - playerHeight - helpHeight - 2
+	availableHeight := m.UI.Height - headerHeight - notificationHeight - playerHeight - helpHeight - 2
 
 	if availableHeight < MinListHeight {
 		availableHeight = MinListHeight
 	}
 
-	m.addToPlaylistList.SetSize(m.width-HorizontalPad, availableHeight)
+	m.addToPlaylistList.SetSize(m.UI.Width-HorizontalPad, availableHeight)
 
 	var content strings.Builder
 	content.WriteString(header)

@@ -11,9 +11,9 @@ import (
 
 func TestHandleKeyPress_Quit(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.width = 100
-	m.height = 50
-	m.view = ViewPlaylists
+	m.UI.Width = 100
+	m.UI.Height = 50
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: 'q', Text: "q"}
 	_, cmd := m.handleKeyPress(msg)
@@ -25,134 +25,134 @@ func TestHandleKeyPress_Quit(t *testing.T) {
 
 func TestHandleKeyPress_Help(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: '?', Text: "?"}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewHelp {
-		t.Errorf("handleKeyPress('?') view = %v, want ViewHelp", updated.view)
+	if updated.Nav.Current != ViewHelp {
+		t.Errorf("handleKeyPress('?') view = %v, want ViewHelp", updated.Nav.Current)
 	}
-	if updated.prevView != ViewPlaylists {
-		t.Errorf("handleKeyPress('?') prevView = %v, want ViewPlaylists", updated.prevView)
+	if updated.Nav.Previous() != ViewPlaylists {
+		t.Errorf("handleKeyPress('?') prevView = %v, want ViewPlaylists", updated.Nav.Previous())
 	}
 }
 
 func TestHandleKeyPress_HelpToggle(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewHelp
-	m.prevView = ViewTracks
+	m.Nav.Current = ViewHelp
+	m.Nav.Stack = []View{ViewTracks}
 
 	msg := tea.KeyPressMsg{Code: '?', Text: "?"}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewTracks {
-		t.Errorf("handleKeyPress('?') from help should return to prevView, got %v", updated.view)
+	if updated.Nav.Current != ViewTracks {
+		t.Errorf("handleKeyPress('?') from help should return to prevView, got %v", updated.Nav.Current)
 	}
 }
 
 func TestHandleKeyPress_BackFromTracks(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewTracks
+	m.Nav.Current = ViewTracks
 
 	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewPlaylists {
-		t.Errorf("handleKeyPress(Esc) from tracks should go to playlists, got %v", updated.view)
+	if updated.Nav.Current != ViewPlaylists {
+		t.Errorf("handleKeyPress(Esc) from tracks should go to playlists, got %v", updated.Nav.Current)
 	}
 }
 
 func TestHandleKeyPress_BackFromAlbum(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewAlbum
-	m.prevView = ViewSearch
+	m.Nav.Current = ViewAlbum
+	m.Nav.Stack = []View{ViewSearch}
 
 	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewSearch {
-		t.Errorf("handleKeyPress(Esc) from album should return to prevView, got %v", updated.view)
+	if updated.Nav.Current != ViewSearch {
+		t.Errorf("handleKeyPress(Esc) from album should return to prevView, got %v", updated.Nav.Current)
 	}
 }
 
 func TestHandleKeyPress_BackFromArtist(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewArtist
-	m.prevView = ViewTracks
+	m.Nav.Current = ViewArtist
+	m.Nav.Stack = []View{ViewTracks}
 
 	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewTracks {
-		t.Errorf("handleKeyPress(Esc) from artist should return to prevView, got %v", updated.view)
+	if updated.Nav.Current != ViewTracks {
+		t.Errorf("handleKeyPress(Esc) from artist should return to prevView, got %v", updated.Nav.Current)
 	}
 }
 
 func TestHandleKeyPress_BackFromLyrics(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewLyrics
-	m.prevView = ViewPlaylists
+	m.Nav.Current = ViewLyrics
+	m.Nav.Stack = []View{ViewPlaylists}
 
 	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewPlaylists {
-		t.Errorf("handleKeyPress(Esc) from lyrics should return to prevView, got %v", updated.view)
+	if updated.Nav.Current != ViewPlaylists {
+		t.Errorf("handleKeyPress(Esc) from lyrics should return to prevView, got %v", updated.Nav.Current)
 	}
 }
 
 func TestHandleKeyPress_BackFromDevices(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewDevices
-	m.prevView = ViewPlaylists
+	m.Nav.Current = ViewDevices
+	m.Nav.Stack = []View{ViewPlaylists}
 
 	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewPlaylists {
-		t.Errorf("handleKeyPress(Esc) from devices should return to prevView, got %v", updated.view)
+	if updated.Nav.Current != ViewPlaylists {
+		t.Errorf("handleKeyPress(Esc) from devices should return to prevView, got %v", updated.Nav.Current)
 	}
 }
 
 func TestHandleKeyPress_BackFromHistory(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewHistory
-	m.prevView = ViewPlaylists
+	m.Nav.Current = ViewHistory
+	m.Nav.Stack = []View{ViewPlaylists}
 
 	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewPlaylists {
-		t.Errorf("handleKeyPress(Esc) from history should return to prevView, got %v", updated.view)
+	if updated.Nav.Current != ViewPlaylists {
+		t.Errorf("handleKeyPress(Esc) from history should return to prevView, got %v", updated.Nav.Current)
 	}
 }
 
 func TestHandleKeyPress_BackFromAddToPlaylist(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewAddToPlaylist
-	m.prevView = ViewTracks
+	m.Nav.Current = ViewAddToPlaylist
+	m.Nav.Stack = []View{ViewTracks}
 
 	msg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewTracks {
-		t.Errorf("handleKeyPress(Esc) from add to playlist should return to prevView, got %v", updated.view)
+	if updated.Nav.Current != ViewTracks {
+		t.Errorf("handleKeyPress(Esc) from add to playlist should return to prevView, got %v", updated.Nav.Current)
 	}
 }
 
 func TestHandleKeyPress_PlayPause(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: tea.KeySpace}
 	_, cmd := m.handleKeyPress(msg)
@@ -164,7 +164,7 @@ func TestHandleKeyPress_PlayPause(t *testing.T) {
 
 func TestHandleKeyPress_Next(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: 'n', Text: "n"}
 	_, cmd := m.handleKeyPress(msg)
@@ -176,7 +176,7 @@ func TestHandleKeyPress_Next(t *testing.T) {
 
 func TestHandleKeyPress_Prev(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: 'p', Text: "p"}
 	_, cmd := m.handleKeyPress(msg)
@@ -188,7 +188,7 @@ func TestHandleKeyPress_Prev(t *testing.T) {
 
 func TestHandleKeyPress_VolumeUp(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: '+', Text: "+"}
 	_, cmd := m.handleKeyPress(msg)
@@ -200,7 +200,7 @@ func TestHandleKeyPress_VolumeUp(t *testing.T) {
 
 func TestHandleKeyPress_VolumeDown(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: '-', Text: "-"}
 	_, cmd := m.handleKeyPress(msg)
@@ -212,7 +212,7 @@ func TestHandleKeyPress_VolumeDown(t *testing.T) {
 
 func TestHandleKeyPress_Shuffle(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: 's', Text: "s"}
 	_, cmd := m.handleKeyPress(msg)
@@ -224,7 +224,7 @@ func TestHandleKeyPress_Shuffle(t *testing.T) {
 
 func TestHandleKeyPress_Repeat(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: 'r', Text: "r"}
 	_, cmd := m.handleKeyPress(msg)
@@ -236,18 +236,18 @@ func TestHandleKeyPress_Repeat(t *testing.T) {
 
 func TestHandleKeyPress_SeekBackward(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewHelp
-	m.localProgress = 10000
+	m.Nav.Current = ViewHelp
+	m.Playback.LocalProgress = 10000
 
 	msg := tea.KeyPressMsg{Code: '[', Text: "["}
 	newModel, cmd := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if !updated.seekPending {
+	if !updated.Playback.SeekPending {
 		t.Error("handleKeyPress('[') should set seekPending")
 	}
-	if updated.pendingSeek != 5000 {
-		t.Errorf("handleKeyPress('[') pendingSeek = %d, want 5000", updated.pendingSeek)
+	if updated.Playback.PendingSeek != 5000 {
+		t.Errorf("handleKeyPress('[') pendingSeek = %d, want 5000", updated.Playback.PendingSeek)
 	}
 	if cmd == nil {
 		t.Error("handleKeyPress('[') should return seek tick cmd")
@@ -256,18 +256,18 @@ func TestHandleKeyPress_SeekBackward(t *testing.T) {
 
 func TestHandleKeyPress_SeekForward(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewHelp
-	m.localProgress = 10000
+	m.Nav.Current = ViewHelp
+	m.Playback.LocalProgress = 10000
 
 	msg := tea.KeyPressMsg{Code: ']', Text: "]"}
 	newModel, cmd := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if !updated.seekPending {
+	if !updated.Playback.SeekPending {
 		t.Error("handleKeyPress(']') should set seekPending")
 	}
-	if updated.pendingSeek != 15000 {
-		t.Errorf("handleKeyPress(']') pendingSeek = %d, want 15000", updated.pendingSeek)
+	if updated.Playback.PendingSeek != 15000 {
+		t.Errorf("handleKeyPress(']') pendingSeek = %d, want 15000", updated.Playback.PendingSeek)
 	}
 	if cmd == nil {
 		t.Error("handleKeyPress(']') should return seek tick cmd")
@@ -276,21 +276,21 @@ func TestHandleKeyPress_SeekForward(t *testing.T) {
 
 func TestHandleKeyPress_SeekBackwardClampToZero(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewHelp
-	m.localProgress = 2000
+	m.Nav.Current = ViewHelp
+	m.Playback.LocalProgress = 2000
 
 	msg := tea.KeyPressMsg{Code: '[', Text: "["}
 	newModel, _ := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.pendingSeek != 0 {
-		t.Errorf("handleKeyPress('[') should clamp pendingSeek to 0, got %d", updated.pendingSeek)
+	if updated.Playback.PendingSeek != 0 {
+		t.Errorf("handleKeyPress('[') should clamp pendingSeek to 0, got %d", updated.Playback.PendingSeek)
 	}
 }
 
 func TestHandleKeyPress_Refresh(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: 'r', Mod: tea.ModCtrl}
 	_, cmd := m.handleKeyPress(msg)
@@ -302,17 +302,17 @@ func TestHandleKeyPress_Refresh(t *testing.T) {
 
 func TestHandleKeyPress_GlobalSearch(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: 'S', Text: "S"}
 	newModel, cmd := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewSearch {
-		t.Errorf("handleKeyPress('S') view = %v, want ViewSearch", updated.view)
+	if updated.Nav.Current != ViewSearch {
+		t.Errorf("handleKeyPress('S') view = %v, want ViewSearch", updated.Nav.Current)
 	}
-	if updated.prevView != ViewPlaylists {
-		t.Errorf("handleKeyPress('S') prevView = %v, want ViewPlaylists", updated.prevView)
+	if updated.Nav.Previous() != ViewPlaylists {
+		t.Errorf("handleKeyPress('S') prevView = %v, want ViewPlaylists", updated.Nav.Previous())
 	}
 	if !updated.searchInput.Focused() {
 		t.Error("handleKeyPress('S') should focus search input")
@@ -324,16 +324,16 @@ func TestHandleKeyPress_GlobalSearch(t *testing.T) {
 
 func TestHandleKeyPress_History(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: 'H', Text: "H"}
 	newModel, cmd := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewHistory {
-		t.Errorf("handleKeyPress('H') view = %v, want ViewHistory", updated.view)
+	if updated.Nav.Current != ViewHistory {
+		t.Errorf("handleKeyPress('H') view = %v, want ViewHistory", updated.Nav.Current)
 	}
-	if !updated.fetching {
+	if !updated.UI.Fetching {
 		t.Error("handleKeyPress('H') should set fetching")
 	}
 	if cmd == nil {
@@ -343,16 +343,16 @@ func TestHandleKeyPress_History(t *testing.T) {
 
 func TestHandleKeyPress_Devices(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: 'd', Text: "d"}
 	newModel, cmd := m.handleKeyPress(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewDevices {
-		t.Errorf("handleKeyPress('d') view = %v, want ViewDevices", updated.view)
+	if updated.Nav.Current != ViewDevices {
+		t.Errorf("handleKeyPress('d') view = %v, want ViewDevices", updated.Nav.Current)
 	}
-	if !updated.fetching {
+	if !updated.UI.Fetching {
 		t.Error("handleKeyPress('d') should set fetching")
 	}
 	if cmd == nil {
@@ -362,8 +362,8 @@ func TestHandleKeyPress_Devices(t *testing.T) {
 
 func TestHandleKeyPress_LyricsWithPlayback(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
-	m.playbackState = &spotify.PlayerState{
+	m.Nav.Current = ViewPlaylists
+	m.Playback.State = &spotify.PlayerState{
 		CurrentlyPlaying: spotify.CurrentlyPlaying{
 			Item: &spotify.FullTrack{
 				SimpleTrack: spotify.SimpleTrack{
@@ -388,7 +388,7 @@ func TestHandleKeyPress_LyricsWithPlayback(t *testing.T) {
 
 func TestHandleKeyPress_LyricsWithoutPlayback(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewPlaylists
+	m.Nav.Current = ViewPlaylists
 
 	msg := tea.KeyPressMsg{Code: 'L', Text: "L"}
 	_, cmd := m.handleKeyPress(msg)
@@ -400,10 +400,10 @@ func TestHandleKeyPress_LyricsWithoutPlayback(t *testing.T) {
 
 func TestHandleLyricsKeys_ScrollUp(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewLyrics
+	m.Nav.Current = ViewLyrics
 	m.lyricsData = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5"
 	m.lyricsScrollOffset = 2
-	m.height = 20
+	m.UI.Height = 20
 
 	msg := tea.KeyPressMsg{Code: tea.KeyUp}
 	newModel, _ := m.handleLyricsKeys(msg)
@@ -416,10 +416,10 @@ func TestHandleLyricsKeys_ScrollUp(t *testing.T) {
 
 func TestHandleLyricsKeys_ScrollDown(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewLyrics
+	m.Nav.Current = ViewLyrics
 	m.lyricsData = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\nLine 11\nLine 12\nLine 13\nLine 14\nLine 15\nLine 16\nLine 17\nLine 18\nLine 19\nLine 20"
 	m.lyricsScrollOffset = 0
-	m.height = 10
+	m.UI.Height = 10
 
 	msg := tea.KeyPressMsg{Code: tea.KeyDown}
 	newModel, _ := m.handleLyricsKeys(msg)
@@ -432,10 +432,10 @@ func TestHandleLyricsKeys_ScrollDown(t *testing.T) {
 
 func TestHandleLyricsKeys_ScrollUpAtTop(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewLyrics
+	m.Nav.Current = ViewLyrics
 	m.lyricsData = "Line 1\nLine 2"
 	m.lyricsScrollOffset = 0
-	m.height = 20
+	m.UI.Height = 20
 
 	msg := tea.KeyPressMsg{Code: tea.KeyUp}
 	newModel, _ := m.handleLyricsKeys(msg)
@@ -448,10 +448,10 @@ func TestHandleLyricsKeys_ScrollUpAtTop(t *testing.T) {
 
 func TestHandleArtistKeys_TabToggle(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewArtist
+	m.Nav.Current = ViewArtist
 	m.artistViewMode = "tracks"
-	m.width = 100
-	m.height = 50
+	m.UI.Width = 100
+	m.UI.Height = 50
 	m.artistTopTracks = views.CreateArtistTopTracksList(nil, m.styles, "", 96, 38)
 	m.artistAlbums = views.CreateArtistAlbumsList(nil, m.styles, 96, 38)
 
@@ -466,10 +466,10 @@ func TestHandleArtistKeys_TabToggle(t *testing.T) {
 
 func TestHandleArtistKeys_TabToggleBack(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewArtist
+	m.Nav.Current = ViewArtist
 	m.artistViewMode = "albums"
-	m.width = 100
-	m.height = 50
+	m.UI.Width = 100
+	m.UI.Height = 50
 	m.artistTopTracks = views.CreateArtistTopTracksList(nil, m.styles, "", 96, 38)
 	m.artistAlbums = views.CreateArtistAlbumsList(nil, m.styles, 96, 38)
 
@@ -484,11 +484,11 @@ func TestHandleArtistKeys_TabToggleBack(t *testing.T) {
 
 func TestHandleArtistKeys_Back(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewArtist
-	m.prevView = ViewSearch
+	m.Nav.Current = ViewArtist
+	m.Nav.Stack = []View{ViewSearch}
 	m.artistViewMode = "tracks"
-	m.width = 100
-	m.height = 50
+	m.UI.Width = 100
+	m.UI.Height = 50
 	m.artistTopTracks = views.CreateArtistTopTracksList(nil, m.styles, "", 96, 38)
 	m.artistAlbums = views.CreateArtistAlbumsList(nil, m.styles, 96, 38)
 
@@ -496,8 +496,8 @@ func TestHandleArtistKeys_Back(t *testing.T) {
 	newModel, _ := m.handleArtistKeys(msg)
 	updated := newModel.(Model)
 
-	if updated.view != ViewSearch {
-		t.Errorf("handleArtistKeys(Esc) view = %v, want ViewSearch", updated.view)
+	if updated.Nav.Current != ViewSearch {
+		t.Errorf("handleArtistKeys(Esc) view = %v, want ViewSearch", updated.Nav.Current)
 	}
 }
 
@@ -547,7 +547,7 @@ func TestHasSearchResults_WithArtists(t *testing.T) {
 
 func TestHandleSearchKeys_FocusOnSlash(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewSearch
+	m.Nav.Current = ViewSearch
 	m.searchInput.Blur()
 
 	msg := tea.KeyPressMsg{Code: '/', Text: "/"}
@@ -564,7 +564,7 @@ func TestHandleSearchKeys_FocusOnSlash(t *testing.T) {
 
 func TestHandleSearchKeys_FocusOnI(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewSearch
+	m.Nav.Current = ViewSearch
 	m.searchInput.Blur()
 
 	msg := tea.KeyPressMsg{Code: 'i', Text: "i"}
@@ -581,7 +581,7 @@ func TestHandleSearchKeys_FocusOnI(t *testing.T) {
 
 func TestHandleSearchKeys_EscBlursInput(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewSearch
+	m.Nav.Current = ViewSearch
 	m.searchInput.Focus()
 
 	msg := tea.KeyPressMsg{Code: 'q', Text: "q"}
@@ -595,7 +595,7 @@ func TestHandleSearchKeys_EscBlursInput(t *testing.T) {
 
 func TestHandleSearchKeys_EnterWithQuery(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewSearch
+	m.Nav.Current = ViewSearch
 	m.searchInput.Focus()
 	m.searchInput.SetValue("test query")
 
@@ -606,7 +606,7 @@ func TestHandleSearchKeys_EnterWithQuery(t *testing.T) {
 	if updated.searchInput.Focused() {
 		t.Error("handleSearchKeys(Enter) should blur search input")
 	}
-	if !updated.searching {
+	if !updated.UI.Searching {
 		t.Error("handleSearchKeys(Enter) should set searching to true")
 	}
 	if cmd == nil {
@@ -616,7 +616,7 @@ func TestHandleSearchKeys_EnterWithQuery(t *testing.T) {
 
 func TestHandleSearchKeys_EnterWithEmptyQuery(t *testing.T) {
 	m := NewModel(nil, getTestConfig())
-	m.view = ViewSearch
+	m.Nav.Current = ViewSearch
 	m.searchInput.Focus()
 	m.searchInput.SetValue("")
 
@@ -624,7 +624,7 @@ func TestHandleSearchKeys_EnterWithEmptyQuery(t *testing.T) {
 	newModel, cmd := m.handleSearchKeys(msg)
 	updated := newModel.(Model)
 
-	if !updated.searching {
+	if !updated.UI.Searching {
 		if cmd != nil {
 			t.Error("handleSearchKeys(Enter) with empty query should return nil cmd")
 		}

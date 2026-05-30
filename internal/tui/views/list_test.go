@@ -1,8 +1,10 @@
 package views
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/zmb3/spotify/v2"
 
@@ -377,4 +379,18 @@ func TestDelegateHeightAndSpacing(t *testing.T) {
 	aad := ArtistAlbumDelegate{Styles: s}
 	assert.Equal(t, 2, aad.Height())
 	assert.Equal(t, 0, aad.Spacing())
+}
+
+func TestRenderRowTruncatesToWidth(t *testing.T) {
+	s := styles.DefaultStyles()
+	var b strings.Builder
+
+	longTitle := strings.Repeat("VeryLongTrackName ", 20)
+	renderRow(&b, s, 40, false, "  ", longTitle, "  ", "desc")
+
+	for _, line := range strings.Split(b.String(), "\n") {
+		if w := ansi.StringWidth(line); w > 40 {
+			t.Errorf("row line width = %d, want <= 40 (line=%q)", w, line)
+		}
+	}
 }
